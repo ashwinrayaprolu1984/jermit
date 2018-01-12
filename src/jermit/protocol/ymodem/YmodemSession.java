@@ -429,7 +429,7 @@ public class YmodemSession extends XmodemSession {
                             fileSize = Long.parseLong(fileSizeString);
                             begin = i + 1;
                         } else if (fileModTime == -1) {
-                            // This is the file size.
+                            // This is the file time.
                             String fileModTimeString = new String(data, begin,
                                 i - begin, "UTF-8");
                             fileModTime = Long.parseLong(fileModTimeString, 8);

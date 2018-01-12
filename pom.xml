@@ -6,8 +6,8 @@
   <artifactId>jermit</artifactId>
   <packaging>jar</packaging>
   <name>Jermit</name>
-  <description>Java Implementation Of The Classic Serial File Transfer Protocols Kermit, Xmodem, and Ymodem</description>
-  <version>0.0.3</version>
+  <description>Java Implementation Of The Classic Serial File Transfer Protocols Kermit, Xmodem, Ymodem, and Zmodem</description>
+  <version>0.1.0</version>
   <url>https://github.com/klamonte/jermit</url>
 
   <licenses>

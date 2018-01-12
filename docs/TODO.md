@@ -1,7 +1,7 @@
 Jermit TODO List
 ================
 
-0.0.4:
+0.1.0:
 
   Zmodem:
     ZmodemSession
@@ -17,7 +17,7 @@ Jermit TODO List
     Update to more recent Jexer Swing terminal backend
     Add batch upload progress bar
 
-0.1.0:
+0.1.1:
 
   SerialURLConnection
     XmodemURLConnection
@@ -25,7 +25,7 @@ Jermit TODO List
     ZmodemURLConnection
     KermitURLConnection
 
-0.1.1:
+0.1.2:
 
   jermit.ui.kermit.Main
     - looks like C-Kermit
@@ -37,6 +37,15 @@ Jermit TODO List
 
 0.2.0:
 
+  New protocol - codename ???
+    Session
+    Sender
+    Receiver
+    CryptSession
+    Compression
+
+0.3.0:
+
   Test under Eclipse
 
   Package for maven
@@ -46,7 +55,7 @@ Jermit TODO List
 
   Bug hunt
 
-0.2.1:
+0.3.1:
 
   Final release to 1.0.0
 
@@ -88,6 +97,8 @@ Properties to control URLConnection behavior:
   jermit.kermit.resend: default true
   jermit.kermit.download.forceBinary: default true
   jermit.kermit.upload.forceBinary: default true
+  jermit.zmodem.issueZChallenge: default false
+  jermit.zmodem.escapeControlChars: default false
 
 
 Properties to control IKS:
@@ -167,4 +178,3 @@ qodem:
   - Kermit received file had wrong timestamp (off by ~20 minutes).
     Was it qodem getting the wrong time, or jermit setting the wrong
     time?
-

@@ -539,7 +539,7 @@ public class KermitSession extends SerialFileTransferSession {
     /**
      * Construct and send an Error packet onto the wire.
      *
-     * @param
+     * @param message message to send to the remote side
      * @param seq sequence number of the packet
      * @throws IOException if a java.io operation throws
      */

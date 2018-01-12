@@ -1,3 +1,12 @@
+January 11, 2018
+
+Stubbing in Zmodem now.  We start by copying Kermit as-is, and then
+change things.  Looking through Qodem's code, Zmodem actually might be
+all that bad.  Now that I know what bugs to look for in rzsz, and with
+all the generic file transfer stuff factored out already, Zmodem might
+just be a few days of effort rather than the weeks of slog it was the
+first time.
+
 January 2, 2018
 
 Prepping for the 0.0.3 release.  I have decided that Kermit streaming

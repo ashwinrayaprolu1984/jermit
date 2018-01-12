@@ -43,7 +43,7 @@ import jermit.protocol.FileInfoModifier;
 import jermit.protocol.SerialFileTransferSession;
 
 /**
- * KermitSender downloads one file using the Kermit protocol.
+ * KermitSender uploads one or more files using the Kermit protocol.
  */
 public class KermitSender implements Runnable {
 

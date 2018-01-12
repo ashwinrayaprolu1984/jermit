@@ -40,7 +40,7 @@ import jermit.protocol.xmodem.XmodemSender;
 import jermit.protocol.xmodem.XmodemSession;
 
 /**
- * YmodemSender downloads one file using the Ymodem protocol.
+ * YmodemSender uploads one more or more files using the Ymodem protocol.
  */
 public class YmodemSender extends XmodemSender implements Runnable {
 

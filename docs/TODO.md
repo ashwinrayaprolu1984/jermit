@@ -12,6 +12,7 @@ Jermit TODO List
     Windowing support
     KermitServerSocket
     KermitServer
+    Use the TIME field for timeout, not generic 10 seconds
 
   QodemUI:
     Update to more recent Jexer Swing terminal backend

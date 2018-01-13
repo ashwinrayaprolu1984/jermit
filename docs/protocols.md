@@ -34,6 +34,12 @@ thus make the file bigger than it should be).
 In the days of BBSes, one would use Xmodem only to download a program
 capable of running Ymodem or Zmodem.
 
+The general philosophy of Xmodem could be summed up as: "get these
+disk sectors over there".  It was the first to arrive, it worked on
+noisy connections, and it got the contents of files copied OK.  But it
+lacked any consideration of speed, file metadata, or out-of-band
+signalling.
+
 Ymodem
 ------
 
@@ -54,6 +60,11 @@ correction.  (Also, the Omen Tech rzsz 'rb' Ymodem receiver cannot
 specify streaming behavior, so Ymodem/G is only good when using 'sb'
 on a remote machine to download to one's local machine.)
 
+Ymodem's philosophy statement might be: "get multiple files
+transferred, with correct file time and size".  Like Xmodem, it lacked
+consideration for speed, additional file metadata (e.g. owner,
+permissions), or out-of-band signalling.
+
 Kermit
 ------
 
@@ -65,6 +76,8 @@ Jermit supports the following features of Kermit:
 
 * File Attributes, including correct time stamp and unmangled
   filename.
+
+* RESEND / file resume support.
 
 * (TODO) Full duplex sliding windows.
 
@@ -94,7 +107,42 @@ escape any character sequence as needed, e.g. the "~." sequence used
 to terminate ssh links.  Protecting ssh like this is impossible in
 Zmodem.)
 
+Kermit's philosophy is: "reliably transfer text and binary files
+successfully across all known systems, with fallback capability for
+earlier versions".  Kermit's packet format was a huge advance, as was
+session negotiation.  But its content-awareness was a two-edged sword:
+it was exceedingly useful to have things like EBCDIC-to-ASCII and for
+"free", but it forced a lot of system awareness into the protocol.
+
 Zmodem
 ------
 
-Zmodem is not yet implemented, but is expected in mid-2018.
+Jermit supports the following features of Zmodem:
+
+* (TODO) Block size up to 8k.
+
+* (TODO) Crash recovery / file resume.
+
+* (TODO) Automatic packet size changes in response to line conditions.
+
+Zmodem was the most widely used serial file transfer protocol in the
+BBS / dialup era.  It could not work in nearly as many conditions as
+Kermit, but when it did work it was very fast indeed.  Zmodem also
+pioneered the "autostart" and had a better file recovery mechanism.
+Combined with the relative ubiquity of 8-bit-clean channels in the BBS
+era, more friendly sysop tools, and a pretty awful smear campaign
+waged against Kermit, Zmodem ended up winning the BBS world over.
+
+Zmodem's philisophy is most definitely: "get multiple files
+transferred, with correct file time and size, and do it quickly".
+Zmodem uses a mix of packets like Kermit and its own stripped-down
+"data subpackets" (really just a TCP-like stream of bytes with a few
+CRCs interspersed).  It strives to get the session negotiation over
+with as quickly as possible and then get to the streaming part.
+
+BridgIt
+-------
+
+Jermit will feature a new protocol (currently codenamed BridgIt) that
+will be a synthesis of dialup protocol learnings plus several newer
+ideas from the Internet era.  See docs/bridgit/ for more information.

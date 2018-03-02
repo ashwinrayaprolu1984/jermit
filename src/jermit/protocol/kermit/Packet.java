@@ -155,12 +155,6 @@ abstract class Packet {
          * Reserved.
          */
         RESERVED2,
-
-        /**
-         * This is used internally by KermitStateHandler to represent an
-         * "any" state.  It cannot be instantiated.
-         */
-        STATE_ANY,
     }
 
     /**
@@ -300,8 +294,6 @@ abstract class Packet {
      */
     protected Packet(final Type type, final byte wireCharacter,
         final String description, final byte checkType, final int seq) {
-
-        assert (type != Type.STATE_ANY);
 
         this.type               = type;
         this.wireCharacter      = wireCharacter;
@@ -1295,7 +1287,7 @@ abstract class Packet {
     }
 
     /**
-     * Decode wire-encoded bytes into the a packet.
+     * Decode wire-encoded bytes into a packet.
      *
      * @param input stream to read from
      * @param transferParameters low-level transfer handshake details
@@ -1726,11 +1718,9 @@ abstract class Packet {
             packet = new Reserved2Packet(checkType, seq);
             break;
         */
-        case STATE_ANY:
-            // Fall through...
         default:
             // We should never transmit these packets, so see them as errors
-            packet = new ErrorPacket("Internal Error!  STATE_ANY on the wire?",
+            packet = new ErrorPacket("Unsupported packet type",
                 checkType, seq);
             break;
         }

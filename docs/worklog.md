@@ -1,11 +1,20 @@
+March 2, 2018
+
+I have a little bit of time to put into this, so let's see where it is
+at...
+
+We are compiling again, with some stubs now for header
+encoding/decoding and a test case.  Corrected some minor comment typos
+in Kermit along the way.
+
 January 11, 2018
 
 Stubbing in Zmodem now.  We start by copying Kermit as-is, and then
-change things.  Looking through Qodem's code, Zmodem actually might be
-all that bad.  Now that I know what bugs to look for in rzsz, and with
-all the generic file transfer stuff factored out already, Zmodem might
-just be a few days of effort rather than the weeks of slog it was the
-first time.
+change things.  Looking through Qodem's code, Zmodem actually might
+note be all that bad.  Now that I know what bugs to look for in rzsz,
+and with all the generic file transfer stuff factored out already,
+Zmodem might just be a few days of effort rather than the weeks of
+slog it was the first time.
 
 January 2, 2018
 

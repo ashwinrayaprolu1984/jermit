@@ -140,9 +140,9 @@ Zmodem uses a mix of packets like Kermit and its own stripped-down
 CRCs interspersed).  It strives to get the session negotiation over
 with as quickly as possible and then get to the streaming part.
 
-BridgIt
+Bridgit
 -------
 
-Jermit will feature a new protocol (currently codenamed BridgIt) that
+Jermit will feature a new protocol (currently codenamed Bridgit) that
 will be a synthesis of dialup protocol learnings plus several newer
 ideas from the Internet era.  See docs/bridgit/ for more information.

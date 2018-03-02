@@ -65,8 +65,7 @@
            classpathref="project.classpath"
            includeantruntime="false"
            debug="on"
-           debuglevel="lines,vars,source"
-           >
+           debuglevel="lines,vars,source">
       <exclude name="**/tests/**"/>
     </javac>
   </target>

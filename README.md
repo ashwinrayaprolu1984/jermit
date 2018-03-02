@@ -136,6 +136,25 @@ The following properties control features of Jermit:
   If true, treat all uploaded files as though they are binary (do not
   advertise as ASCII in the Attributes packet).  Default: true.
 
+  jermit.zmodem.escapeControlChars
+  --------------------------------
+
+  If true, escape control characters.  This will make file transfers
+  slower but may be necessary for Zmodem to work at all over the link.
+  Default: false.
+
+  jermit.zmodem.download.issueZChallenge
+  --------------------------------------
+
+  If true, issue a ZCHALLENGE at the beginning of a download session.
+  ZCHALLENGE was meant to improve security but some Zmodem senders do
+  not support it.  Its security benefits are dubious.  Default: false.
+
+  jermit.zmodem.useCrc32
+  ----------------------
+
+  If true, use a 32-bit CRC.  Default: true.
+
 
 Known Issues / Arbitrary Decisions
 ----------------------------------

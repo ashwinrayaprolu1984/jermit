@@ -26,12 +26,12 @@
  * @author Kevin Lamonte [kevin.lamonte@gmail.com]
  * @version 1
  */
-package jermit.protocol.kermit;
+package jermit.protocol.zmodem;
 
 /**
- * NakPacket is used to request a packet retransmission.
+ * ZSInit is sent by the sender with specified expectations.
  */
-class NakPacket extends Packet {
+class ZSInit extends Header {
 
     // ------------------------------------------------------------------------
     // Constructors -----------------------------------------------------------
@@ -39,49 +39,22 @@ class NakPacket extends Packet {
 
     /**
      * Public constructor.
-     *
-     * @param parseState reason this NAK was generated
-     * @param checkType checksum type
-     * @param seq sequence number of the packet this NAK is in response to
      */
-    public NakPacket(final ParseState parseState, final byte checkType,
-        final int seq) {
+    public ZSInit() {
+        super(Type.ZSINIT, (byte) 0x02, "ZSINIT");
 
-        super(Type.NAK, (byte) 'N', "NAK Negative Acknowledge", checkType, seq);
-        this.parseState = parseState;
-    }
-
-    /**
-     * Public constructor.
-     *
-     * @param checkType checksum type
-     * @param seq sequence number of the packet this NAK is in response to
-     */
-    public NakPacket(final byte checkType, final int seq) {
-        this(ParseState.OK, checkType, seq);
+        /*
+         * Escape ctrl characters by default, but not 8bit characters
+         */
+        if (System.getProperty("jermit.zmodem.escapeControlChars",
+                "false").equals("true")
+        ) {
+            data |= ZRInit.TX_ESCAPE_CTRL;
+        }
     }
 
     // ------------------------------------------------------------------------
-    // Packet -----------------------------------------------------------------
+    // Header -----------------------------------------------------------------
     // ------------------------------------------------------------------------
-
-    /**
-     * NAKs by definition have no data field.
-     *
-     * @throws KermitProtocolException if the other side violates the Kermit
-     * protocol specification
-     */
-    @Override
-    protected final void readFromData() throws KermitProtocolException {
-        data = new byte[0];
-    }
-
-    /**
-     * NAKs by definition have no data field.
-     */
-    @Override
-    protected final void writeToData() {
-        data = new byte[0];
-    }
 
 }

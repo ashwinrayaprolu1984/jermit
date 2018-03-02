@@ -1,7 +1,7 @@
-BridgIt Protocol Design Goals
+Bridgit Protocol Design Goals
 =============================
 
-BridgIt is a new protocol that combines dialup protocol experience
+Bridgit is a new protocol that combines dialup protocol experience
 with newer learnings from the Internet era.  This document outlines
 the design goals and features intended to get there.
 

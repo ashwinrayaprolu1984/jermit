@@ -102,6 +102,27 @@ public class ZmodemSession extends SerialFileTransferSession {
      */
     int skipFileMode = 0;
 
+    /**
+     * If true, use 32-bit CRC.  Note package private access.
+     */
+    boolean useCrc32 = false;
+
+    /**
+     * If true, escape control characters.  Note package private access.
+     */
+    boolean escapeControlChars = false;
+
+    /**
+     * If true, escape 8-bit characters.  Note package private access.
+     */
+    boolean escape8BitChars = false;
+
+    /**
+     * Header.encodeByte() is a simple lookup into this map.  Note package
+     * private access.
+     */
+    byte [] encodeByteMap = new byte[256];
+
     // ------------------------------------------------------------------------
     // Constructors -----------------------------------------------------------
     // ------------------------------------------------------------------------
@@ -132,6 +153,12 @@ public class ZmodemSession extends SerialFileTransferSession {
             this.input  = new EOFInputStream(new TimeoutInputStream(input,
                     10 * 1000));
         }
+
+        useCrc32 = System.getProperty(
+                "jermit.zmodem.useCrc32","true").equals("true");
+        escapeControlChars = System.getProperty(
+                "jermit.zmodem.escapeControlChars", "false").equals("true");
+        setupEncodeByteMap();
     }
 
     /**
@@ -162,6 +189,12 @@ public class ZmodemSession extends SerialFileTransferSession {
         }
         this.overwrite          = overwrite;
         this.transferDirectory  = pathname;
+
+        useCrc32 = System.getProperty(
+                "jermit.zmodem.useCrc32","true").equals("true");
+        escapeControlChars = System.getProperty(
+                "jermit.zmodem.escapeControlChars", "false").equals("true");
+        setupEncodeByteMap();
     }
 
     // ------------------------------------------------------------------------
@@ -430,7 +463,7 @@ public class ZmodemSession extends SerialFileTransferSession {
     protected Header getHeader() throws ReadTimeoutException, EOFException,
                                         IOException, ZmodemCancelledException {
 
-        Header header = Header.decode(input, zmodemState);
+        Header header = Header.decode(input);
         if (header.parseState == Header.ParseState.OK) {
             consecutiveErrors = 0;
         }
@@ -444,7 +477,7 @@ public class ZmodemSession extends SerialFileTransferSession {
      * @throws IOException if a java.io operation throws
      */
     protected void sendHeader(final Header header) throws IOException {
-        byte [] headerBytes = header.encode();
+        byte [] headerBytes = header.encode(this);
         output.write(headerBytes);
         output.flush();
 
@@ -466,7 +499,7 @@ public class ZmodemSession extends SerialFileTransferSession {
      */
     protected void sendZNak() throws IOException {
         Header header = new ZNak();
-        byte [] headerBytes = header.encode();
+        byte [] headerBytes = header.encode(this);
         output.write(headerBytes);
         output.flush();
 
@@ -476,6 +509,174 @@ public class ZmodemSession extends SerialFileTransferSession {
                 System.err.printf("%02x ", headerBytes[i]);
             }
             System.err.println();
+        }
+    }
+
+    /**
+     * Set up the encode byte map.  Note package private access.
+     */
+    void setupEncodeByteMap() {
+
+        for (int ch = 0; ch < 256; ch++) {
+
+            boolean encodeChar = false;
+
+            /*
+             * Oh boy, do we have another design flaw...  lrzsz does not
+             * allow any regular characters to be encoded, so we cannot
+             * protect against telnet, ssh, and rlogin sequences from
+             * breaking the link.
+             */
+            switch (ch) {
+
+            case Header.C_CAN:
+            case Header.C_XON:
+            case Header.C_XOFF:
+            case (Header.C_XON | 0x80):
+            case (Header.C_XOFF | 0x80):
+                encodeChar = true;
+                break;
+            default:
+                if ((ch < 0x20) && (escapeControlChars == true)) {
+                    /*
+                     * 7bit control char, encode only if requested
+                     */
+                    encodeChar = true;
+                } else if ((ch >= 0x80) && (ch < 0xA0)) {
+                    /*
+                     * 8bit control char, always encode
+                     */
+                    encodeChar = true;
+                } else if (((ch & 0x80) != 0)
+                    && (escape8BitChars == true)
+                ) {
+                    /*
+                     * 8bit char, encode only if requested
+                     */
+                    encodeChar = true;
+                }
+                break;
+            }
+
+            if (encodeChar == true) {
+                /*
+                 * Encode
+                 */
+                encodeByteMap[ch] = (byte) (ch | 0x40);
+            } else if (ch == 0x7F) {
+                /*
+                 * Escaped control character: 0x7f
+                 */
+                encodeByteMap[ch] = 'l';
+            } else if (ch == 0xFF) {
+                /*
+                 * Escaped control character: 0xff
+                 */
+                encodeByteMap[ch] = 'm';
+            } else {
+                /*
+                 * Regular character
+                 */
+                encodeByteMap[ch] = (byte) ch;
+            }
+        }
+    }
+
+    /**
+     * Open a file for download, checking for existence and overwriting if
+     * necessary.
+     *
+     * @param filename the name of the file to open
+     * @param fileModTime file modification time from the ZFile data
+     * subpacket in millis, or -1 if unknown
+     * @param fileSize file size from the ZFile data subpacket, or -1 if
+     * unknown
+     * @return true if the transfer is ready to download another file
+     */
+    protected boolean openDownloadFile(final String filename,
+        final long fileModTime, final long fileSize) {
+
+        // Make sure we cannot overwrite this file.
+        assert (transferDirectory != null);
+        assert (filename != null);
+        File checkExists = new File(transferDirectory, filename);
+        if (checkExists.exists() == false) {
+            if (DEBUG) {
+                System.err.printf("%s does not exist, OK\n", filename);
+            }
+            openDownloadFile(checkExists, fileModTime, fileSize);
+            return true;
+        }
+
+        if (DEBUG) {
+            System.err.printf("%s already exists, checking access...\n",
+                filename);
+        }
+
+        if (overwrite) {
+            // We are supposed to blow this file away
+            if (DEBUG) {
+                System.err.println("overwrite is true, BLOW IT AWAY!");
+            }
+            openDownloadFile(checkExists, fileModTime, fileSize);
+            return true;
+        }
+
+        // TODO: crash recovery logic
+        // For now, always recover
+        openDownloadFile(checkExists, fileModTime, fileSize);
+        return true;
+    }
+
+    /**
+     * Open a file for download.
+     *
+     * @param fileRef the file to open
+     * @param fileModTime file modification time from the File-Attributes
+     * packet in millis, or -1 if unknown
+     * @param fileSize file size from the File-Attributes packet, or -1 if
+     * unknown
+     */
+    private void openDownloadFile(final File fileRef,
+        final long fileModTime, final long fileSize) {
+
+        // TODO: allow callers to provide a class name for the
+        // LocalFileInterface implementation and use reflection to get it.
+        LocalFileInterface localFile = new LocalFile(fileRef);
+        if (DEBUG) {
+            System.err.println("Transfer directory: " + transferDirectory);
+            System.err.println("Download to: " + localFile.getLocalName());
+        }
+
+        synchronized (this) {
+            // Add the file to the files list and make it the current file.
+            FileInfo file = new FileInfo(localFile);
+            files.add(file);
+            currentFile = files.size() - 1;
+
+            // Now perform the stats update.  Since we have the file size we
+            // can do it all though.
+
+            // Set state BEFORE getCurrentFileModifier(), otherwise
+            // getCurrentFile() might return null.
+            setState(SerialFileTransferSession.State.TRANSFER);
+            FileInfoModifier setFile = getCurrentFileInfoModifier();
+
+            if (fileModTime >= 0) {
+                setFile.setModTime(fileModTime);
+            }
+            setFile.setStartTime(System.currentTimeMillis());
+            setFile.setBlockSize(getBlockSize());
+            if (fileSize >= 0) {
+                setFile.setBytesTotal(fileSize);
+                setFile.setBlocksTotal(file.getBytesTotal() / getBlockSize());
+                if (file.getBlocksTotal() * getBlockSize() <
+                    file.getBytesTotal()
+                ) {
+                    setFile.setBlocksTotal(file.getBlocksTotal() + 1);
+                }
+                bytesTotal = bytesTotal + file.getBytesTotal();
+            }
         }
     }
 

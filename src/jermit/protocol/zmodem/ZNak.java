@@ -43,7 +43,7 @@ class ZNak extends Header {
      * @param parseState reason this NAK was generated
      */
     public ZNak(final ParseState parseState) {
-        super(Type.ZNAK, (byte) 0x06, "ZNAK");
+        super(Type.ZNAK, (byte) 0x06, "ZNAK", 0);
         this.parseState = parseState;
     }
 
@@ -52,6 +52,15 @@ class ZNak extends Header {
      */
     public ZNak() {
         this(ParseState.OK);
+    }
+
+    /**
+     * Public constructor.
+     *
+     * @param data the data field for this header
+     */
+    public ZNak(final int data) {
+        super(Type.ZNAK, (byte) 0x06, "ZNAK", data);
     }
 
     // ------------------------------------------------------------------------

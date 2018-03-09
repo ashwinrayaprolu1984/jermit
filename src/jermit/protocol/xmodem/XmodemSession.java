@@ -953,8 +953,8 @@ public class XmodemSession extends SerialFileTransferSession {
         } else {
             // CRC
             int crc = crc16(data);
-            output.write((crc >> 8) & 0xFF);
-            output.write( crc       & 0xFF);
+            output.write((crc >>> 8) & 0xFF);
+            output.write( crc        & 0xFF);
         }
         output.flush();
     }

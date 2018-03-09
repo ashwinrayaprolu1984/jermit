@@ -153,6 +153,7 @@ public class ZmodemReceiver implements Runnable {
 
 
 
+
                 case COMPLETE:
                     done = true;
                     break;
@@ -238,7 +239,8 @@ public class ZmodemReceiver implements Runnable {
         if (DEBUG) {
             System.err.println("receiveBegin() sending ZRINIT...");
         }
-        ZRInit zrInit = new ZRInit();
+        session.setupEncodeByteMap();
+        ZRInit zrInit = new ZRInit(session);
         session.sendHeader(zrInit);
         session.zmodemState = ZmodemState.ZRINIT_WAIT;
         session.setCurrentStatus("SENDING ZRINIT");
@@ -262,6 +264,12 @@ public class ZmodemReceiver implements Runnable {
         if (header.parseState != Header.ParseState.OK) {
             // We had an error.  NAK it.
             session.sendZNak();
+        } else if (header instanceof ZRQInit) {
+            // Sender has repeated its ZRQINIT, re-send the ZRINIT response.
+            ZRInit zrInit = new ZRInit(session);
+            session.sendHeader(zrInit);
+            session.zmodemState = ZmodemState.ZRINIT_WAIT;
+            session.setCurrentStatus("SENDING ZRINIT");
         } else if (header instanceof ZSInit) {
             // We got the remote side's ZSInit
             session.setCurrentStatus("ZSINIT");
@@ -269,9 +277,26 @@ public class ZmodemReceiver implements Runnable {
             // TODO: look at ZSInit
 
 
+            session.setupEncodeByteMap();
 
             // Move to the next state
             session.zmodemState = ZmodemState.ZFILE;
+        } else if (header instanceof ZFile) {
+            ZFile fileHeader = (ZFile) header;
+            if (session.openDownloadFile(fileHeader.filename,
+                    fileHeader.fileModTime, fileHeader.fileSize)
+            ) {
+                synchronized (session) {
+                    file = session.getCurrentFile();
+                    setFile = session.getCurrentFileInfoModifier();
+                    fileOutput = file.getLocalFile().getOutputStream();
+                }
+            } else {
+                return;
+            }
+
+            // Move to the next state
+            session.zmodemState = ZmodemState.ZRPOS_WAIT;
         } else if (header instanceof ZAbort) {
             // Remote side signalled error
             session.abort("ZABORT");
@@ -283,10 +308,6 @@ public class ZmodemReceiver implements Runnable {
             session.cancelFlag = 1;
         }
     }
-
-
-
-
 
     /**
      * Get the session.

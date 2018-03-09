@@ -268,6 +268,11 @@ abstract class Packet {
     /**
      * Map of counts of Ctrl-C to InputStream.  Key is
      * System.identityHashCode(), value is consecutive Ctrl-C count.
+     *
+     * Why static?  Because each Ctrl-C in the input returns a new NakPacket
+     * in decode(), thus a single Packet instance can't see multiple Ctrl-C's
+     * to count them.  We could also have this at session level, but that
+     * seems like it could be more confusing in stack traces.
      */
     private static Map<Integer, Integer> ctrlCMap = null;
 
@@ -466,7 +471,7 @@ abstract class Packet {
         for (int i = 0; i < 256; i++) {
             crc = i;
             for (int j = 0; j < 8; j++) {
-                crc = (crc >> 1) ^ (((crc & 1) != 0) ? CRC16 : 0);
+                crc = (crc >>> 1) ^ (((crc & 1) != 0) ? CRC16 : 0);
             }
             crc16Table[i] = (short) (crc & 0xFFFF);
         }
@@ -492,7 +497,7 @@ abstract class Packet {
             if (transferParameters.active.sevenBitOnly == true) {
                 ch &= 0x7F;
             }
-            crc = crc16Table[(crc ^ ch) & 0xFF] ^ (crc >> 8);
+            crc = crc16Table[(crc ^ ch) & 0xFF] ^ (crc >>> 8);
             crc &= 0xFFFF;
         }
         return crc & 0xFFFF;
@@ -886,10 +891,10 @@ abstract class Packet {
                 transferParameters);
             if (DEBUG) {
                 System.err.printf("encode(): type 2 checksum: %c %c (%04x)\n",
-                    (char) (toChar((byte) ((checksum2 >> 6) & 0x3F))),
+                    (char) (toChar((byte) ((checksum2 >>> 6) & 0x3F))),
                     (char) (toChar((byte) (checksum2 & 0x3F))), checksum2);
             }
-            output.write(toChar((byte) ((checksum2 >> 6) & 0x3F)));
+            output.write(toChar((byte) ((checksum2 >>> 6) & 0x3F)));
             output.write(toChar((byte) (checksum2 & 0x3F)));
             break;
 
@@ -900,11 +905,11 @@ abstract class Packet {
                 transferParameters);
             if (DEBUG) {
                 System.err.printf("encode(): type B checksum: %c %c (%04x)\n",
-                    (char) (toChar((byte) (((checksum2 >> 6) & 0x3F) + 1))),
+                    (char) (toChar((byte) (((checksum2 >>> 6) & 0x3F) + 1))),
                     (char) (toChar((byte) ((checksum2 & 0x3F) + 1))),
                     checksum2);
             }
-            output.write(toChar((byte) (((checksum2 >> 6) & 0x3F) + 1)));
+            output.write(toChar((byte) (((checksum2 >>> 6) & 0x3F) + 1)));
             output.write(toChar((byte) ((checksum2 & 0x3F) + 1)));
             break;
 
@@ -915,12 +920,12 @@ abstract class Packet {
                 transferParameters);
             if (DEBUG) {
                 System.err.printf("encode(): type 3 CRC16: %c %c %c (%04x)\n",
-                    (char) (toChar((byte) ((crc >> 12) & 0x0F))),
-                    (char) (toChar((byte) ((crc >> 6) & 0x3F))),
+                    (char) (toChar((byte) ((crc >>> 12) & 0x0F))),
+                    (char) (toChar((byte) ((crc >>> 6) & 0x3F))),
                     (char) (toChar((byte) (crc & 0x3F))), crc);
             }
-            output.write((byte) toChar((byte) ((crc >> 12) & 0x0F)));
-            output.write((byte) toChar((byte) ((crc >> 6) & 0x3F)));
+            output.write((byte) toChar((byte) ((crc >>> 12) & 0x0F)));
+            output.write((byte) toChar((byte) ((crc >>> 6) & 0x3F)));
             output.write((byte) toChar((byte) (crc & 0x3F)));
             break;
 
@@ -1236,7 +1241,10 @@ abstract class Packet {
     private static int readCheckCtrlC(final InputStream input) throws IOException, KermitCancelledException {
 
         Integer ctrlCKey = System.identityHashCode(input);
-        Integer ctrlCCount = ctrlCMap.get(ctrlCKey);
+        Integer ctrlCCount = null;
+        synchronized (ctrlCMap) {
+            ctrlCCount = ctrlCMap.get(ctrlCKey);
+        }
         if (ctrlCCount == null) {
             ctrlCCount = 0;
         }
@@ -1247,7 +1255,9 @@ abstract class Packet {
                 throw new KermitCancelledException("3 Ctrl-C's seen");
             }
         }
-        ctrlCMap.put(ctrlCKey, ctrlCCount);
+        synchronized (ctrlCMap) {
+            ctrlCMap.put(ctrlCKey, ctrlCCount);
+        }
         return ch;
     }
 
@@ -1570,7 +1580,7 @@ abstract class Packet {
                 rawData.length - checkTypeLength, transferParameters);
             if (DEBUG) {
                 System.err.printf("decode(): type 2 checksum: %c %c (%04x)\n",
-                    (char) (toChar((byte) ((checksum2 >> 6) & 0x3F))),
+                    (char) (toChar((byte) ((checksum2 >>> 6) & 0x3F))),
                     (char) (toChar((byte) (checksum2 & 0x3F))),
                     checksum2);
                 System.err.printf("decode():           given: %s %s (%04x)\n",
@@ -1599,7 +1609,7 @@ abstract class Packet {
 
             if (DEBUG) {
                 System.err.printf("decode(): type B checksum: %c %c (%04x)\n",
-                    (char) (toChar((byte) (((checksum2 >> 6) & 0x3F) + 1))),
+                    (char) (toChar((byte) (((checksum2 >>> 6) & 0x3F) + 1))),
                     (char) (toChar((byte) ((checksum2 & 0x3F) + 1))),
                     checksum2);
                 System.err.printf("decode():           given: %s %s (%04x)\n",
@@ -1629,8 +1639,8 @@ abstract class Packet {
 
             if (DEBUG) {
                 System.err.printf("decode(): type 3 CRC16: %c %c %c (%04x)\n",
-                    (char) (toChar((byte) ((crc >> 12) & 0x0F))),
-                    (char) (toChar((byte) ((crc >> 6) & 0x3F))),
+                    (char) (toChar((byte) ((crc >>> 12) & 0x0F))),
+                    (char) (toChar((byte) ((crc >>> 6) & 0x3F))),
                     (char) (toChar((byte) (crc & 0x3F))),
                     crc);
                 System.err.printf("decode():       given: %s %s %s (%04x)\n",

@@ -194,5 +194,5 @@ that could both pass vttest and transfer files.
 
   * Jexer (licensed MIT) is available at
     https://github.com/klamonte/jexer .  A minimal working subset of
-    the Jexer Swing backend code is reproduced here for use Jermit's
-    "Qodem" UI (jermit.ui.qodem.Jermit).
+    the Jexer Swing backend code is reproduced here for use in
+    Jermit's "Qodem" UI (jermit.ui.qodem.Jermit).

@@ -39,18 +39,24 @@ class ZSInit extends Header {
 
     /**
      * Public constructor.
+     *
+     * @param session the ZmodemSession
      */
-    public ZSInit() {
-        super(Type.ZSINIT, (byte) 0x02, "ZSINIT");
+    public ZSInit(final ZmodemSession session) {
+        super(Type.ZSINIT, (byte) 0x02, "ZSINIT", 0);
 
-        /*
-         * Escape ctrl characters by default, but not 8bit characters
-         */
-        if (System.getProperty("jermit.zmodem.escapeControlChars",
-                "false").equals("true")
-        ) {
+        if (session.escapeControlChars) {
             data |= ZRInit.TX_ESCAPE_CTRL;
         }
+    }
+
+    /**
+     * Public constructor.
+     *
+     * @param data the data field for this header
+     */
+    public ZSInit(final int data) {
+        super(Type.ZSINIT, (byte) 0x02, "ZSINIT", data);
     }
 
     // ------------------------------------------------------------------------

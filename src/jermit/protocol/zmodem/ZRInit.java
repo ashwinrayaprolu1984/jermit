@@ -83,21 +83,35 @@ class ZRInit extends Header {
 
     /**
      * Public constructor.
+     *
+     * @param session the ZmodemSession
      */
-    public ZRInit() {
-        super(Type.ZRINIT, (byte) 0x01, "ZRINIT");
+    public ZRInit(final ZmodemSession session) {
+        super(Type.ZRINIT, (byte) 0x01, "ZRINIT", 0);
 
         data = TX_CAN_FULL_DUPLEX | TX_CAN_OVERLAP_IO;
-        if (System.getProperty("jermit.zmodem.useCrc32",
-                "true").equals("true")
-        ) {
+        if (session.useCrc32) {
             data |= TX_CAN_CRC32;
         }
-        if (System.getProperty("jermit.zmodem.escapeControlChars",
-                "false").equals("true")
-        ) {
+        if (session.escapeControlChars) {
             data |= TX_ESCAPE_CTRL;
         }
+    }
+
+    /**
+     * Public constructor.
+     *
+     * @param data the data field for this header
+     */
+    public ZRInit(final int data) {
+        super(Type.ZRINIT, (byte) 0x01, "ZRINIT", data);
+    }
+
+    /**
+     * Public constructor.
+     */
+    public ZRInit() {
+        this(0);
     }
 
     // ------------------------------------------------------------------------

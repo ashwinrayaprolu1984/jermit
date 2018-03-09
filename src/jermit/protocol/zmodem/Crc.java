@@ -115,14 +115,14 @@ class Crc {
         crc32Table[0] = 0;
         do {
             if ((h & 1) != 0) {
-                h = (h >> 1) ^ CRC32;
+                h = (h >>> 1) ^ CRC32;
             } else {
-                h >>= 1;
+                h >>>= 1;
             }
             for (i = 0; i < 256; i += j + j) {
                 crc32Table[i + j] = crc32Table[i] ^ h;
             }
-        } while ((j >>= 1) != 0);
+        } while ((j >>>= 1) != 0);
     }
 
     /**
@@ -134,15 +134,20 @@ class Crc {
      * The CRC is computed using preset to -1 and invert.
      *
      * @param oldCrc the old CRC value
-     * @param buf the bytes to add to the CRC
+     * @param buf the bytes to add to the CRC, or null to initialize
+     * @param len the number of bytes to read in buf
      */
-    public static int computeCrc32(final int oldCrc, final byte [] buf) {
-        int crc;
-        int i = 0;
-        if (buf.length > 0) {
-            crc = oldCrc;
-            while (i < buf.length) {
-                crc = (crc >> 8) ^ crc32Table[(crc ^ buf[i]) & 0xff];
+    public static int computeCrc32(final int oldCrc, final byte [] buf,
+        final int len) {
+
+        if (buf != null) {
+            assert (len > 0);
+            assert (len <= buf.length);
+
+            int crc = oldCrc;
+            int i = 0;
+            while (i < len) {
+                crc = (crc >>> 8) ^ crc32Table[(crc ^ buf[i]) & 0xff];
                 i++;
             }
             return crc ^ 0xffffffff;        /* Invert */
@@ -153,14 +158,20 @@ class Crc {
 
     /**
      * This CRC16 routine was transliterated from XYMODEM.DOC.
-     * 
+     *
      * @param oldCrc the old CRC
      * @param buf the message block
+     * @param len the number of bytes to read in buf
      * @return an integer which contains the CRC
      */
-    public static int computeCrc16(final int oldCrc, final byte [] buf) {
+    public static int computeCrc16(final int oldCrc, final byte [] buf,
+        final int len) {
+
+        assert (len > 0);
+        assert (len <= buf.length);
+
         int crc = oldCrc;
-        for (int i = 0; i < buf.length; i++) {
+        for (int i = 0; i < len; i++) {
             crc = crc ^ (buf[i] << 8);
             for (int j = 0; j < 8; j++) {
                 if ((crc & 0x8000) != 0) {

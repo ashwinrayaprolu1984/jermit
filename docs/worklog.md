@@ -1,3 +1,11 @@
+March 8, 2018
+
+I am slowly piecing together a real Zmodem receiver.  The code is
+slightly cleaner than Qodem's.  Things are made a lot faster because I
+have Ymodem and Kermit already done, so there is lots of copypasta
+around for things like parsing a filename and opening it.  Probably
+about one more hobby day away from a working download test.
+
 March 2, 2018
 
 I have a little bit of time to put into this, so let's see where it is

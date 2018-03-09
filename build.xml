@@ -119,6 +119,8 @@
 
   <target name="build" depends="jar"/>
 
+  <target name="test" depends="tests"/>
+
   <target name="doc" depends="docs"/>
 
   <target name="docs" depends="jar">

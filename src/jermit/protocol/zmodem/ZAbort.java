@@ -39,9 +39,18 @@ class ZAbort extends Header {
 
     /**
      * Public constructor.
+     *
+     * @param data the data field for this header
+     */
+    public ZAbort(final int data) {
+        super(Type.ZABORT, (byte) 0x07, "ZABORT", data);
+    }
+
+    /**
+     * Public constructor.
      */
     public ZAbort() {
-        super(Type.ZABORT, (byte) 0x07, "ZABORT");
+        this(0);
     }
 
     // ------------------------------------------------------------------------

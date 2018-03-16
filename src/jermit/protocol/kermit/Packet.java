@@ -1254,6 +1254,8 @@ abstract class Packet {
             if (ctrlCCount == 3) {
                 throw new KermitCancelledException("3 Ctrl-C's seen");
             }
+        } else {
+            ctrlCCount = 0;
         }
         synchronized (ctrlCMap) {
             ctrlCMap.put(ctrlCKey, ctrlCCount);

@@ -38,12 +38,12 @@ import jermit.tests.TestFailedException;
 /**
  * Test a basic Zmodem file transfer.
  */
-public class Zmodem1 extends SerialTransferTest implements Runnable {
+public class Zmodem2 extends SerialTransferTest implements Runnable {
 
     /**
      * Public constructor.
      */
-    public Zmodem1() {
+    public Zmodem2() {
     }
 
     /**
@@ -51,18 +51,18 @@ public class Zmodem1 extends SerialTransferTest implements Runnable {
      */
     @Override
     public void doTest() throws IOException, TestFailedException {
-        System.out.printf("Zmodem1: basic ASCII file download\n");
+        System.out.printf("Zmodem2: one binary file download 8k\n");
 
         // Process:
         //
-        //   1. Extract jermit/tests/data/ALICE26A_NO_EOT.TXT to
+        //   1. Extract jermit/tests/data/lady-of-shalott.jpg to
         //      a temp file.
-        //   2. Spawn 'zmodem -i -s /path/to/ALICE26A_NO_EOT.TXT'
-        //   3. Spin up ZmodemReceiver to download to a temp file.
+        //   2. Spawn 'zmodem -i -s /path/to/lady-of-shalott.jpg'
+        //   3. Spin up ZmodemReceiver to download to a temp directory.
         //   4. Read both files and compare contents.
 
-        File source = File.createTempFile("send-zmodemttttt", ".txt");
-        saveResourceToFile("jermit/tests/data/ALICE26A_NO_EOT.TXT", source);
+        File source = File.createTempFile("send-kerrrrrrmit", ".jpg");
+        saveResourceToFile("jermit/tests/data/lady-of-shalott.jpg", source);
         source.deleteOnExit();
 
         // Create a directory
@@ -75,8 +75,7 @@ public class Zmodem1 extends SerialTransferTest implements Runnable {
         File destination = new File(destinationPath, source.getName());
         destination.deleteOnExit();
 
-        // One must pass "-e" to get sz to use ZSINIT.
-        ProcessBuilder zmodemPB = new ProcessBuilder("sz", "-e",
+        ProcessBuilder zmodemPB = new ProcessBuilder("sz", "-8",
             source.getPath());
         Process zmodemSender = zmodemPB.start();
 
@@ -110,7 +109,7 @@ public class Zmodem1 extends SerialTransferTest implements Runnable {
      */
     public static void main(final String [] args) {
         try {
-            Zmodem1 test = new Zmodem1();
+            Zmodem2 test = new Zmodem2();
             test.doTest();
         } catch (Throwable t) {
             t.printStackTrace();

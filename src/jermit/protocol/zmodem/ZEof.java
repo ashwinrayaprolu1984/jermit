@@ -29,9 +29,9 @@
 package jermit.protocol.zmodem;
 
 /**
- * ZSInit is sent by the sender with specified expectations.
+ * ZEof represents the end of a file.
  */
-class ZSInit extends Header {
+class ZEof extends Header {
 
     // ------------------------------------------------------------------------
     // Constructors -----------------------------------------------------------
@@ -39,15 +39,9 @@ class ZSInit extends Header {
 
     /**
      * Public constructor.
-     *
-     * @param session the ZmodemSession
      */
-    public ZSInit(final ZmodemSession session) {
-        super(Type.ZSINIT, (byte) 0x02, "ZSINIT", 0);
-
-        if (session.escapeControlChars) {
-            data |= ZRInit.TX_ESCAPE_CTRL;
-        }
+    public ZEof() {
+        this(0);
     }
 
     /**
@@ -55,8 +49,8 @@ class ZSInit extends Header {
      *
      * @param data the data field for this header
      */
-    public ZSInit(final int data) {
-        super(Type.ZSINIT, (byte) 0x02, "ZSINIT", data);
+    public ZEof(final int data) {
+        super(Type.ZEOF, (byte) 0x0B, "ZEOF", data);
     }
 
     // ------------------------------------------------------------------------
@@ -64,15 +58,15 @@ class ZSInit extends Header {
     // ------------------------------------------------------------------------
 
     // ------------------------------------------------------------------------
-    // ZSInit -----------------------------------------------------------------
+    // ZEof -------------------------------------------------------------------
     // ------------------------------------------------------------------------
 
     /**
-     * Get the flags from the remote side.
+     * Get the file size value.
      *
-     * @return the flags
+     * @return the value
      */
-    public int getFlags() {
+    public int getFileSize() {
         return data;
     }
 

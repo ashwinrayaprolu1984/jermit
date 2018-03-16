@@ -28,10 +28,13 @@
  */
 package jermit.protocol.zmodem;
 
+import java.util.Random;
+
 /**
- * ZSInit is sent by the sender with specified expectations.
+ * ZChallenge generates a random number to be used in the ZCHALLENGE/ZACK
+ * exchange.
  */
-class ZSInit extends Header {
+class ZChallenge extends Header {
 
     // ------------------------------------------------------------------------
     // Constructors -----------------------------------------------------------
@@ -39,15 +42,14 @@ class ZSInit extends Header {
 
     /**
      * Public constructor.
-     *
-     * @param session the ZmodemSession
      */
-    public ZSInit(final ZmodemSession session) {
-        super(Type.ZSINIT, (byte) 0x02, "ZSINIT", 0);
+    public ZChallenge() {
+        this(0);
 
-        if (session.escapeControlChars) {
-            data |= ZRInit.TX_ESCAPE_CTRL;
-        }
+        // Generate a random int, but it cannot be zero.
+        do {
+            data = (new Random()).nextInt();
+        } while (data == 0);
     }
 
     /**
@@ -55,8 +57,8 @@ class ZSInit extends Header {
      *
      * @param data the data field for this header
      */
-    public ZSInit(final int data) {
-        super(Type.ZSINIT, (byte) 0x02, "ZSINIT", data);
+    public ZChallenge(final int data) {
+        super(Type.ZCHALLENGE, (byte) 0x0E, "ZCHALLENGE", data);
     }
 
     // ------------------------------------------------------------------------
@@ -64,15 +66,15 @@ class ZSInit extends Header {
     // ------------------------------------------------------------------------
 
     // ------------------------------------------------------------------------
-    // ZSInit -----------------------------------------------------------------
+    // ZChallenge -------------------------------------------------------------
     // ------------------------------------------------------------------------
 
     /**
-     * Get the flags from the remote side.
+     * Get the generated ZCHALLENGE value.
      *
-     * @return the flags
+     * @return the value
      */
-    public int getFlags() {
+    public int getChallengeValue() {
         return data;
     }
 

@@ -28,9 +28,10 @@
  */
 package jermit.tests;
 
+import jermit.tests.kermit.*;
 import jermit.tests.xmodem.*;
 import jermit.tests.ymodem.*;
-import jermit.tests.kermit.*;
+import jermit.tests.zmodem.*;
 
 /**
  * Execute all of the transfer tests.
@@ -94,7 +95,7 @@ public class TestAll {
              * KERMIT ---------------------------------------------------------
              */
 
-            if (true) {
+            if (false) {
 
             /*
              * Basic uploads and downloads - clean line.
@@ -119,6 +120,40 @@ public class TestAll {
              */
             (new Kermit8()).doTest();
             (new Kermit9()).doTest();
+
+            }
+
+            /*
+             * ZMODEM ---------------------------------------------------------
+             */
+
+            if (true) {
+
+            /*
+             * Basic uploads and downloads - clean line.
+             */
+            (new Zmodem1()).doTest();
+            (new Zmodem2()).doTest();
+            (new Zmodem3()).doTest();
+            }
+
+            if (false) {
+            (new Zmodem4()).doTest();
+            (new Zmodem5()).doTest();
+
+            /*
+             * Escaped control character tests.  Turn it off afterwards.
+             */
+            System.setProperty("jermit.zmodem.escapeControlChars", "true");
+            (new Zmodem6()).doTest();
+            (new Zmodem7()).doTest();
+            System.setProperty("jermit.zmodem.escapeControlChars", "false");
+
+            /*
+             * Noisy tests.
+             */
+            (new Zmodem8()).doTest();
+            (new Zmodem9()).doTest();
 
             }
 

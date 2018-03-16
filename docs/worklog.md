@@ -1,3 +1,31 @@
+March 16, 2018
+
+Got a full receiver working!  Woot!  This one has ZCHALLENGE but not
+yet ZSKIP/ZCRC, so no true error recovery.  But that is a very small
+add-on to where we are now.  We also have receive Zmodem-8k for
+absolutely zero effort.
+
+The nastiest bit by far is the ZACK to ZDATA.  The spec requires that
+we include the current file offset, so what could have been nicely
+encapsulated in Header needs to have a hole punched to bring that
+offset down AND another up so that Header can send a response out.
+But we don't want to do that everywhere, so header needs to know the
+overall state.
+
+The other nasty is the ZCRCG/ZCRCQ, which makes for great wire
+transfer but means for my implementation that the entire file contents
+reside in memory because sz will never chunk a file on a clean line.
+I might choose to change this, but it's a real tradeoff between Header
+making a lot of sense on its own or ZmodemReceiver being a mess...
+
+Then again, I have more refactoring that needs to be done anyway
+across all the protocols.  Xmodem doesn't need block read/write in its
+session, Kermit and Ymodem don't need file I/O in the session,
+ZmodemReceiver might as well be the only thing that can decode data
+subpackets, etc.  I'll make that a specific release target.
+
+Let's get this committed now.
+
 March 8, 2018
 
 I am slowly piecing together a real Zmodem receiver.  The code is

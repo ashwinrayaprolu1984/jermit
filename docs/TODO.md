@@ -3,10 +3,33 @@ Jermit TODO List
 
 0.1.0:
 
+  BUG: increment consecutive error counts for Kermit and Zmodem
+
   Zmodem:
     ZmodemSession
     ZmodemReceiver
     ZmodemSender
+
+0.1.1:
+
+  Refactor:
+    - Move all session functions into receiver/sender if they are only
+      used there.
+    - Header.readDataSubpacket() to ZmodemReceiver
+    - Collect openDownloadFile()s into common functions
+
+  Fix up corner cases:
+    Zmodem:
+      Up/down block size on noisy transfers
+      Max window size
+      ASCII transfer
+      8k for sender
+      CR-@-CR sequence
+      Total batch stats
+    Kermit:
+
+
+0.1.2:
 
   Kermit:
     Windowing support
@@ -18,7 +41,7 @@ Jermit TODO List
     Update to more recent Jexer Swing terminal backend
     Add batch upload progress bar
 
-0.1.1:
+0.2.0:
 
   SerialURLConnection
     XmodemURLConnection
@@ -26,7 +49,7 @@ Jermit TODO List
     ZmodemURLConnection
     KermitURLConnection
 
-0.1.2:
+0.3.0:
 
   jermit.ui.kermit.Main
     - looks like C-Kermit
@@ -36,7 +59,7 @@ Jermit TODO List
   Bidirectional Kermit:
     SelectableInputStream
 
-0.2.0:
+0.4.0:
 
   New protocol - codename ???
     Session
@@ -45,7 +68,7 @@ Jermit TODO List
     CryptSession
     Compression
 
-0.3.0:
+0.5.0:
 
   Test under Eclipse
 
@@ -56,7 +79,7 @@ Jermit TODO List
 
   Bug hunt
 
-0.3.1:
+0.9.0:
 
   Final release to 1.0.0
 

@@ -29,9 +29,18 @@
 package jermit.protocol.zmodem;
 
 /**
- * ZSInit is sent by the sender with specified expectations.
+ * Zdata contains a file position and some file data.
  */
-class ZSInit extends Header {
+class ZData extends Header {
+
+    // ------------------------------------------------------------------------
+    // Variables --------------------------------------------------------------
+    // ------------------------------------------------------------------------
+
+    /**
+     * File data bytes.
+     */
+    private byte [] fileData;
 
     // ------------------------------------------------------------------------
     // Constructors -----------------------------------------------------------
@@ -39,15 +48,9 @@ class ZSInit extends Header {
 
     /**
      * Public constructor.
-     *
-     * @param session the ZmodemSession
      */
-    public ZSInit(final ZmodemSession session) {
-        super(Type.ZSINIT, (byte) 0x02, "ZSINIT", 0);
-
-        if (session.escapeControlChars) {
-            data |= ZRInit.TX_ESCAPE_CTRL;
-        }
+    public ZData() {
+        this(0);
     }
 
     /**
@@ -55,25 +58,38 @@ class ZSInit extends Header {
      *
      * @param data the data field for this header
      */
-    public ZSInit(final int data) {
-        super(Type.ZSINIT, (byte) 0x02, "ZSINIT", data);
+    public ZData(final int data) {
+        super(Type.ZDATA, (byte) 0x0A, "ZDATA", data);
+
+        fileData = new byte[0];
     }
 
     // ------------------------------------------------------------------------
     // Header -----------------------------------------------------------------
     // ------------------------------------------------------------------------
 
+    /**
+     * Parse whatever came in a data subpacket.  Used by subclasses to put
+     * data into fields.
+     *
+     * @param subpacket the bytes of the subpacket
+     */
+    @Override
+    protected void parseDataSubpacket(final byte [] subpacket) {
+        fileData = subpacket;
+    }
+
     // ------------------------------------------------------------------------
-    // ZSInit -----------------------------------------------------------------
+    // ZData ------------------------------------------------------------------
     // ------------------------------------------------------------------------
 
     /**
-     * Get the flags from the remote side.
+     * Get the file data.
      *
-     * @return the flags
+     * @return the data
      */
-    public int getFlags() {
-        return data;
+    public byte [] getFileData() {
+        return fileData;
     }
 
 }

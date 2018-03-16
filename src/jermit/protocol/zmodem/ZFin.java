@@ -29,9 +29,9 @@
 package jermit.protocol.zmodem;
 
 /**
- * ZSInit is sent by the sender with specified expectations.
+ * ZFin represents the end of a transfer session.
  */
-class ZSInit extends Header {
+class ZFin extends Header {
 
     // ------------------------------------------------------------------------
     // Constructors -----------------------------------------------------------
@@ -39,15 +39,9 @@ class ZSInit extends Header {
 
     /**
      * Public constructor.
-     *
-     * @param session the ZmodemSession
      */
-    public ZSInit(final ZmodemSession session) {
-        super(Type.ZSINIT, (byte) 0x02, "ZSINIT", 0);
-
-        if (session.escapeControlChars) {
-            data |= ZRInit.TX_ESCAPE_CTRL;
-        }
+    public ZFin() {
+        this(0);
     }
 
     /**
@@ -55,25 +49,12 @@ class ZSInit extends Header {
      *
      * @param data the data field for this header
      */
-    public ZSInit(final int data) {
-        super(Type.ZSINIT, (byte) 0x02, "ZSINIT", data);
+    public ZFin(final int data) {
+        super(Type.ZFIN, (byte) 0x08, "ZFIN", data);
     }
 
     // ------------------------------------------------------------------------
     // Header -----------------------------------------------------------------
     // ------------------------------------------------------------------------
-
-    // ------------------------------------------------------------------------
-    // ZSInit -----------------------------------------------------------------
-    // ------------------------------------------------------------------------
-
-    /**
-     * Get the flags from the remote side.
-     *
-     * @return the flags
-     */
-    public int getFlags() {
-        return data;
-    }
 
 }

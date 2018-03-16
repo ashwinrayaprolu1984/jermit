@@ -56,7 +56,7 @@ public class ZmodemSession extends SerialFileTransferSession {
     // ------------------------------------------------------------------------
 
     // If true, enable some debugging output.  Note package private access.
-    static final boolean DEBUG = true;
+    static final boolean DEBUG = false;
 
     /**
      * The number of consecutive errors.  After 10 errors, the transfer is
@@ -455,17 +455,25 @@ public class ZmodemSession extends SerialFileTransferSession {
     /**
      * Receive and decode a header from the wire.
      *
+     * @param offset initial place in the ZDATA stream
      * @return header the header received
      * @throws IOException if a java.io operation throws
      * @throws ZmodemCancelledException if five Ctrl-X's are encountered in a
      * row
      */
-    protected Header getHeader() throws ReadTimeoutException, EOFException,
-                                        IOException, ZmodemCancelledException {
+    protected Header getHeader(final long offset) throws ReadTimeoutException,
+        EOFException, IOException, ZmodemCancelledException {
 
-        Header header = Header.decode(input);
+        Header header = Header.decode(this, input, offset);
         if (header.parseState == Header.ParseState.OK) {
             consecutiveErrors = 0;
+        } else {
+            consecutiveErrors++;
+            // TODO:
+            //
+            //   1. Change window up/down based on consecutive errors
+            //   2. Emit error message
+            //   3. Die on too many errors
         }
         return header;
     }
@@ -580,6 +588,18 @@ public class ZmodemSession extends SerialFileTransferSession {
                 encodeByteMap[ch] = (byte) ch;
             }
         }
+
+        if (DEBUG) {
+            System.err.println("Encode byte map:");
+            for (int ch = 0; ch < 256; ch++) {
+                System.err.printf(" [%02x = %02x]", ch, encodeByteMap[ch]);
+                if ((ch % 6) == 5) {
+                    System.err.println();
+                }
+            }
+            System.err.println();
+        }
+
     }
 
     /**
@@ -622,7 +642,7 @@ public class ZmodemSession extends SerialFileTransferSession {
             return true;
         }
 
-        // TODO: crash recovery logic
+        // TODO: crash recovery logic, ZSKIP and ZCRC
         // For now, always recover
         openDownloadFile(checkExists, fileModTime, fileSize);
         return true;

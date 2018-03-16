@@ -29,9 +29,9 @@
 package jermit.protocol.zmodem;
 
 /**
- * ZSInit is sent by the sender with specified expectations.
+ * ZRPos contains a file position.
  */
-class ZSInit extends Header {
+class ZRPos extends Header {
 
     // ------------------------------------------------------------------------
     // Constructors -----------------------------------------------------------
@@ -39,15 +39,9 @@ class ZSInit extends Header {
 
     /**
      * Public constructor.
-     *
-     * @param session the ZmodemSession
      */
-    public ZSInit(final ZmodemSession session) {
-        super(Type.ZSINIT, (byte) 0x02, "ZSINIT", 0);
-
-        if (session.escapeControlChars) {
-            data |= ZRInit.TX_ESCAPE_CTRL;
-        }
+    public ZRPos() {
+        this(0);
     }
 
     /**
@@ -55,8 +49,8 @@ class ZSInit extends Header {
      *
      * @param data the data field for this header
      */
-    public ZSInit(final int data) {
-        super(Type.ZSINIT, (byte) 0x02, "ZSINIT", data);
+    public ZRPos(final int data) {
+        super(Type.ZRPOS, (byte) 0x09, "ZRPOS", data);
     }
 
     // ------------------------------------------------------------------------
@@ -64,15 +58,15 @@ class ZSInit extends Header {
     // ------------------------------------------------------------------------
 
     // ------------------------------------------------------------------------
-    // ZSInit -----------------------------------------------------------------
+    // ZRPos ------------------------------------------------------------------
     // ------------------------------------------------------------------------
 
     /**
-     * Get the flags from the remote side.
+     * Get the file position.
      *
-     * @return the flags
+     * @return the value
      */
-    public int getFlags() {
+    public int getPosition() {
         return data;
     }
 

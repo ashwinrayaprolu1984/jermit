@@ -448,6 +448,12 @@ public class KermitSession extends SerialFileTransferSession {
         Packet packet = Packet.decode(input, transferParameters, kermitState);
         if (packet.parseState == Packet.ParseState.OK) {
             consecutiveErrors = 0;
+        } else {
+            consecutiveErrors++;
+            // TODO:
+            //
+            //   1. Emit error message
+            //   2. Die on too many errors
         }
         return packet;
     }

@@ -718,6 +718,7 @@ public class KermitReceiver implements Runnable {
                 e.printStackTrace();
             }
             session.abort("UNABLE TO WRITE TO FILE " + file.getLocalName());
+            session.cancelFlag = 1;
             return;
         }
     }

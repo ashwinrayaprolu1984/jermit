@@ -303,7 +303,7 @@ public class ZmodemSender implements Runnable {
         }
         session.setCurrentStatus("WAITING FOR ZRINIT");
 
-        Header header = session.getHeader();
+        Header header = session.getHeader(0);
         if (header.parseState != Header.ParseState.OK) {
             // We had an error.  NAK it.
             session.sendZNak();

@@ -451,6 +451,8 @@ class Header {
             if (ctrlXCount == 5) {
                 throw new ZmodemCancelledException("5 Ctrl-X's seen");
             }
+        } else {
+            ctrlXCount = 0;
         }
         synchronized (ctrlXMap) {
             ctrlXMap.put(ctrlXKey, ctrlXCount);
@@ -565,7 +567,18 @@ class Header {
      * @return the encoded byte(s)
      */
     private byte [] encodeByte(final byte ch, final ZmodemSession session) {
-        byte newCh = session.encodeByteMap[ch];
+        int newCh = ch;
+        if (newCh < 0) {
+            newCh = session.encodeByteMap[newCh + 256];
+        } else {
+            newCh = session.encodeByteMap[ch];
+        }
+        /*
+        if (DEBUG) {
+            System.err.printf("encodeByte() %02x --> %02x\n", ch, newCh);
+        }
+        */
+
         byte [] result;
         if (newCh != ch) {
             /*
@@ -573,13 +586,13 @@ class Header {
              */
             result = new byte[2];
             result[0] = C_CAN;
-            result[1] = newCh;
+            result[1] = (byte) (newCh & 0xFF);
         } else {
             /*
              * Regular character
              */
             result = new byte[1];
-            result[0] = newCh;
+            result[0] = ch;
         }
         return result;
     }
@@ -803,15 +816,20 @@ class Header {
     /**
      * Decode wire-encoded bytes into a header.
      *
+     * @param session the ZmodemSession
      * @param input stream to read from
+     * @param offset initial place in the ZDATA stream
      * @return the next header, mangled or not.  In insufficient data is
      * present to determine the correct header type, a ZNak will be returned.
      * @throws IOException if a java.io operation throws
      * @throws ZmodemCancelledException if five Ctrl-X's are encountered in a
      * row
      */
-    public static Header decode(final EOFInputStream input) throws EOFException,
-        IOException, ReadTimeoutException, ZmodemCancelledException {
+    public static Header decode(final ZmodemSession session,
+        final EOFInputStream input,
+        final long offset) throws EOFException, IOException,
+                                  ReadTimeoutException,
+                                  ZmodemCancelledException {
 
         if (DEBUG) {
             System.err.println("decode()");
@@ -1055,68 +1073,72 @@ class Header {
          */
         Header header = null;
         switch (typeWireByte) {
-        case 0:
+        case 0x00:
             header = new ZRQInit(dataField);
             break;
-        case 1:
+        case 0x01:
             header = new ZRInit(dataField);
             break;
-        case 2:
+        case 0x02:
             header = new ZSInit(dataField);
             break;
-        case 3:
+        case 0x03:
             header = new ZAck(dataField);
             break;
-        case 4:
+        case 0x04:
             header = new ZFile(dataField);
             break;
-            /*
-        case 5:
+        /*
+        case 0x05:
             type_string = "ZSKIP";
             break;
-        case 6:
-            type_string = "ZNAK";
+        */
+        case 0x06:
+            header = new ZNak(dataField);
             break;
-        case 7:
-            type_string = "ZABORT";
+        case 0x07:
+            header = new ZAbort(dataField);
             break;
-        case 8:
-            type_string = "ZFIN";
+        case 0x08:
+            header = new ZFin(dataField);
             break;
-        case 9:
-            type_string = "ZRPOS";
+        case 0x09:
+            header = new ZRPos(dataField);
             break;
-        case 10:
-            type_string = "ZDATA";
+        case 0x0A:
+            header = new ZData(dataField);
             break;
-        case 11:
-            type_string = "ZEOF";
+        case 0x0B:
+            header = new ZEof(dataField);
             break;
-        case 12:
+        /*
+        case 0x0C:
             type_string = "ZFERR";
             break;
-        case 13:
+        case 0x0D:
             type_string = "ZCRC";
             break;
-        case 14:
-            type_string = "ZCHALLENGE";
+        */
+        case 0x0E:
+            header = new ZChallenge(dataField);
             break;
-        case 15:
+        /*
+        case 0x0F:
             type_string = "ZCOMPL";
             break;
-        case 16:
+        case 0x10:
             type_string = "ZCAN";
             break;
-        case 17:
+        case 0x11:
             type_string = "ZFREECNT";
             break;
-        case 18:
+        case 0x12:
             type_string = "ZCOMMAND";
             break;
          */
         default:
             if (DEBUG) {
-                System.err.printf("decode(): INVALID HEADER TYPE %d\n",
+                System.err.printf("\ndecode(): INVALID HEADER TYPE %d\n",
                     typeWireByte);
             }
             return new ZNak(ParseState.PROTO_HEADER_TYPE);
@@ -1143,11 +1165,11 @@ class Header {
 
         if (DEBUG) {
             if (useCrc32 == true) {
-                System.err.printf("decode(): CRC32 type = %s (%d) " +
+                System.err.printf("\ndecode(): CRC32 type = %s (%d) " +
                     "argument=%08x crc=%08x\n", header.getDescription(),
                     header.getWireByte(), header.data, givenCrc32);
             } else {
-                System.err.printf("decode(): CRC16 type = %s (%d) " +
+                System.err.printf("\ndecode(): CRC16 type = %s (%d) " +
                     "argument=%08x crc=%04x\n", header.getDescription(),
                     header.getWireByte(), header.data, givenCrc16);
             }
@@ -1161,7 +1183,7 @@ class Header {
             crc32 = Crc.computeCrc32(crc32, crcBuffer.toByteArray(), 5);
             if (crc32 == givenCrc32) {
                 if (DEBUG) {
-                    System.err.println("decode(): CRC OK\n");
+                    System.err.println("decode(): CRC OK");
                 }
             } else {
                 if (DEBUG) {
@@ -1176,7 +1198,7 @@ class Header {
             int crc16 = Crc.computeCrc16(0, crcBuffer.toByteArray(), 5);
             if (crc16 == givenCrc16) {
                 if (DEBUG) {
-                    System.err.println("decode(): CRC OK\n");
+                    System.err.println("decode(): CRC OK");
                 }
             } else {
                 if (DEBUG) {
@@ -1200,7 +1222,8 @@ class Header {
             /*
              * Data "subpacket" follows, read it.
              */
-            if (header.readDataSubpacket(input, useCrc32) == false) {
+            if (header.readDataSubpacket(session, input, useCrc32,
+                    offset) == false) {
                 header.parseState = ParseState.TRANSMIT_DATA_CRC;
             }
             break;
@@ -1225,235 +1248,268 @@ class Header {
     /**
      * Read a data subpacket and then call parseDataSubpacket.
      *
+     * @param session the ZmodemSession
      * @param input stream to read from
      * @param useCrc32 if true, this is a 32-bit CRC
+     * @param offset initial place in the ZDATA stream
      * @return true if the data subpacket had a good CRC
      * @throws IOException if a java.io operation throws
      * @throws ZmodemCancelledException if five Ctrl-X's are encountered in a
      * row
      */
-    private boolean readDataSubpacket(final EOFInputStream input,
-        final boolean useCrc32) throws IOException, ZmodemCancelledException {
-
-        boolean doingCrc = false;
-        boolean done = false;
-        byte crcType = 0;
-        int ch = -1;
+    private boolean readDataSubpacket(final ZmodemSession session,
+        final EOFInputStream input, final boolean useCrc32,
+        final long offset) throws IOException, ZmodemCancelledException {
 
         if (DEBUG) {
             System.err.printf("readDataSubpacket() %s\n",
                 (useCrc32 ? "CRC32" : "CRC16"));
         }
 
-        ByteArrayOutputStream result = new ByteArrayOutputStream();
-        ByteArrayOutputStream crcBuffer = new ByteArrayOutputStream();
+        ByteArrayOutputStream finalResult = new ByteArrayOutputStream();
+        long currentOffset = offset;
+        boolean endHeader = false;
+        while (!endHeader) {
+            ByteArrayOutputStream result = new ByteArrayOutputStream();
+            ByteArrayOutputStream crcBuffer = new ByteArrayOutputStream();
+            boolean doingCrc = false;
+            boolean done = false;
+            byte crcType = 0;
+            int ch = -1;
+            boolean needAck = false;
+            while (!done) {
 
-        while (!done) {
-            ch = readCheckCtrlX(input);
-            if (ch == C_CAN) {
+                ch = readCheckCtrlX(input);
+                if (ch == C_CAN) {
+                    /*
+                     * Entered a CRC escape.  Point past the CAN.
+                     */
+                    ch = readCheckCtrlX(input);
+
+                    if ((ch == ZCRCE)
+                        || (ch == ZCRCG)
+                        || (ch == ZCRCQ)
+                        || (ch == ZCRCW)
+                    ) {
+                        if (doingCrc == true) {
+                            /*
+                             * CRC escape within a CRC escape.  This is a
+                             * protocol error or bad data on the wire.
+                             */
+                            return false;
+                        }
+                        /*
+                         * CRC escape, switch to crc collection
+                         */
+                        doingCrc = true;
+                        crcType = (byte) ch;
+                        assert (crcBuffer.size() == 0);
+                        crcBuffer.write(ch);
+                    } else if (ch == 'l') {
+                        /*
+                         * Escaped control character: 0x7f
+                         */
+                        if (doingCrc == true) {
+                            crcBuffer.write(0x7F);
+                        } else {
+                            result.write(0x7F);
+                        }
+                    } else if (ch == 'm') {
+                        /*
+                         * Escaped control character: 0xff
+                         */
+                        if (doingCrc == true) {
+                            crcBuffer.write(0xFF);
+                        } else {
+                            result.write(0xFF);
+                        }
+                    } else if ((ch & 0x40) != 0) {
+                        /*
+                         * Escaped control character: CAN m OR 0x40
+                         */
+                        if (doingCrc == true) {
+                            crcBuffer.write(ch & 0xBF);
+                        } else {
+                            result.write(ch & 0xBF);
+                        }
+                    } else {
+                        /*
+                         * Should never get here.  This is a protocol error or
+                         * bad data on the wire.
+                         */
+                    }
+
+                } else {
+                    /*
+                     * If we're doing the CRC part, put the data elsewhere.
+                     */
+                    if (doingCrc == true) {
+                        crcBuffer.write(ch);
+                    } else {
+                        /*
+                         * I ought to ignore any unencoded control characters
+                         * when encoding was requested at this point here.
+                         * However, encoding control characters is broken anyway
+                         * in lrzsz so I won't bother with a further check.  If
+                         * you want actually reliable transfer over
+                         * not-8-bit-clean links, use Kermit instead.
+                         */
+                        result.write(ch);
+                    }
+
+                }
+
+                if (doingCrc == true) {
+                    if ((useCrc32 == true) && (crcBuffer.size() == 5)) {
+                        /*
+                         * Done
+                         */
+                        done = true;
+                    } else if ((useCrc32 == false) && (crcBuffer.size() == 3)) {
+                        /*
+                         * Done
+                         */
+                        done = true;
+                    }
+                }
+
+            } // while (!done)
+
+            switch (crcType) {
+
+            case ZCRCE:
                 /*
-                 * Entered a CRC escape.  Point past the CAN.
+                 * CRC next, frame ends, header packet follows
+                 */
+                if (DEBUG) {
+                    System.err.println("\nreadDataSubpacket(): ZCRCE");
+                }
+                endHeader = true;
+                break;
+            case ZCRCG:
+                /*
+                 * CRC next, frame continues nonstop
+                 */
+                if (DEBUG) {
+                    System.err.println("\nreadDataSubpacket(): ZCRCG");
+                }
+                break;
+            case ZCRCQ:
+                /*
+                 * CRC next, frame continues, ZACK expected
+                 */
+                if (DEBUG) {
+                    System.err.println("\nreadDataSubpacket(): ZCRCQ");
+                }
+                needAck = true;
+                break;
+            case ZCRCW:
+                /*
+                 * CRC next, ZACK expected, end of frame
+                 */
+                if (DEBUG) {
+                    System.err.println("\nreadDataSubpacket(): ZCRCW");
+                }
+                needAck = true;
+                endHeader = true;
+                break;
+            default:
+                /*
+                 * Unknown CRC type, bail out.
+                 */
+                if (DEBUG) {
+                    System.err.println("\nreadDataSubpacket(): " +
+                        "UNKNOWN CRC TYPE !!!");
+                }
+                return false;
+            }
+
+            if (crcType == ZCRCW) {
+                /*
+                 * ZCRCW is supposed to always followed by XON.  For sanity
+                 * see if that was actually the case or not.
                  */
                 ch = readCheckCtrlX(input);
-
-                if ((ch == ZCRCE)
-                    || (ch == ZCRCG)
-                    || (ch == ZCRCQ)
-                    || (ch == ZCRCW)
-                ) {
-                    if (doingCrc == true) {
-                        /*
-                         * CRC escape within a CRC escape.  This is a
-                         * protocol error or bad data on the wire.
-                         */
-                        return false;
-                    }
-                    /*
-                     * CRC escape, switch to crc collection
-                     */
-                    doingCrc = true;
-                    crcType = (byte) ch;
-                    assert (crcBuffer.size() == 0);
-                    crcBuffer.write(ch);
-                } else if (ch == 'l') {
-                    /*
-                     * Escaped control character: 0x7f
-                     */
-                    if (doingCrc == true) {
-                        crcBuffer.write(0x7F);
-                    } else {
-                        result.write(0x7F);
-                    }
-                } else if (ch == 'm') {
-                    /*
-                     * Escaped control character: 0xff
-                     */
-                    if (doingCrc == true) {
-                        crcBuffer.write(0xFF);
-                    } else {
-                        result.write(0xFF);
-                    }
-                } else if ((ch & 0x40) != 0) {
-                    /*
-                     * Escaped control character: CAN m OR 0x40
-                     */
-                    if (doingCrc == true) {
-                        crcBuffer.write(ch & 0xBF);
-                    } else {
-                        result.write(ch & 0xBF);
-                    }
-                } else {
-                    /*
-                     * Should never get here.  This is a protocol error or
-                     * bad data on the wire.
-                     */
+                if (DEBUG) {
+                    System.err.printf("\nZCRCW XON was: %s\n",
+                        (ch == C_XON ? "present" : "absent"));
                 }
+            }
 
-            } else {
+            /*
+             * Check the CRC now.  Notice in the checks below that the CRC
+             * escape byte itself has to be included in the CRC check.  Yes,
+             * this is stupid.
+             *
+             * If the CRC fails, return false.
+             */
+            byte [] packetBytes = result.toByteArray();
+            byte [] crcBytes = crcBuffer.toByteArray();
+            byte [] crcInput = new byte[packetBytes.length + 1];
+            System.arraycopy(packetBytes, 0, crcInput, 0, packetBytes.length);
+            crcInput[packetBytes.length] = crcBytes[0];
+
+            if (useCrc32 == true) {
+                int crc32 = Crc.computeCrc32(0, null, 0);
+                crc32 = Crc.computeCrc32(crc32, crcInput, crcInput.length);
                 /*
-                 * If we're doing the CRC part, put the data elsewhere.
+                 * Little-endian
                  */
-                if (doingCrc == true) {
-                    crcBuffer.write(ch);
-                } else {
-                    /*
-                     * I ought to ignore any unencoded control characters
-                     * when encoding was requested at this point here.
-                     * However, encoding control characters is broken anyway
-                     * in lrzsz so I won't bother with a further check.  If
-                     * you want actually reliable transfer over
-                     * not-8-bit-clean links, use Kermit instead.
-                     */
-                    result.write(ch);
+                int givenCrc32 = ((crcBytes[4] & 0xFF) << 24) |
+                                 ((crcBytes[3] & 0xFF) << 16) |
+                                 ((crcBytes[2] & 0xFF) << 8) |
+                                  (crcBytes[1] & 0xFF);
+
+                if (DEBUG) {
+                    System.err.printf("readDataSubpacket(): " +
+                        "DATA CRC32: given    %08x\n", givenCrc32);
+                    System.err.printf("readDataSubpacket(): " +
+                        "DATA CRC32: computed %08x\n", crc32);
                 }
 
-            }
+                if (crc32 != givenCrc32) {
+                    return false;
+                }
+            } else {
+                int crc16 = Crc.computeCrc16(0, crcInput, crcInput.length);
+                int givenCrc16 = ((crcBytes[1] & 0xFF) << 8) |
+                                  (crcBytes[2] & 0xFF);
 
-            if (doingCrc == true) {
-                if ((useCrc32 == true) && (crcBuffer.size() == 5)) {
-                    /*
-                     * Done
-                     */
-                    done = true;
-                } else if ((useCrc32 == false) && (crcBuffer.size() == 3)) {
-                    /*
-                     * Done
-                     */
-                    done = true;
+                if (DEBUG) {
+                    System.err.printf("readDataSubpacket(): " +
+                        "DATA CRC16: given    %04x\n", givenCrc16);
+                    System.err.printf("readDataSubpacket(): " +
+                        "DATA CRC16: computed %04x\n", crc16);
+                }
+
+                if (crc16 != givenCrc16) {
+                    return false;
                 }
             }
-
-        } /* while (!done) */
-
-        switch (crcType) {
-
-        case ZCRCE:
-            /*
-             * CRC next, frame ends, header packet follows
-             */
-            if (DEBUG) {
-                System.err.println("readDataSubpacket(): ZCRCE");
+            currentOffset += packetBytes.length;
+            if (needAck) {
+                switch (session.zmodemState) {
+                case ZRPOS_WAIT:
+                    session.sendHeader(new ZAck(
+                        bigToLittleEndian((int) currentOffset)));
+                    break;
+                default:
+                    break;
+                }
             }
-            break;
-        case ZCRCG:
-            /*
-             * CRC next, frame continues nonstop
-             */
-            if (DEBUG) {
-                System.err.println("readDataSubpacket(): ZCRCG");
-            }
-            break;
-        case ZCRCQ:
-            /*
-             * CRC next, frame continues, ZACK expected
-             */
-            if (DEBUG) {
-                System.err.println("readDataSubpacket(): ZCRCQ");
-            }
-            break;
-        case ZCRCW:
-            /*
-             * CRC next, ZACK expected, end of frame
-             */
-            if (DEBUG) {
-                System.err.println("readDataSubpacket(): ZCRCW");
-            }
-            break;
-        default:
-            if (DEBUG) {
-                System.err.println("readDataSubpacket(): UNKNOWN CRC TYPE !!!");
-            }
-            break;
-        }
-
-        if (crcType == ZCRCW) {
-            /*
-             * ZCRCW is supposed to always followed by XON.  For sanity see
-             * if that was actually the case or not.
-             */
-            ch = readCheckCtrlX(input);
-            if (DEBUG) {
-                System.err.printf("ZCRCW XON was: %s\n",
-                    (ch == C_XON ? "present" : "absent"));
-            }
-        }
-
-        /*
-         * Check the CRC now.  Notice in the checks below that the CRC escape
-         * byte itself has to be included in the CRC check.  Yes, this is
-         * stupid.
-         *
-         * If the CRC fails, return false.
-         */
-        byte [] packetBytes = result.toByteArray();
-        byte [] crcBytes = crcBuffer.toByteArray();
-        byte [] crcInput = new byte[packetBytes.length + 1];
-        System.arraycopy(packetBytes, 0, crcInput, 0, packetBytes.length);
-        crcInput[packetBytes.length] = crcBytes[0];
-
-        if (useCrc32 == true) {
-            int crc32 = Crc.computeCrc32(0, null, 0);
-            crc32 = Crc.computeCrc32(crc32, crcInput, crcInput.length);
-            /*
-             * Little-endian
-             */
-            int givenCrc32 = ((crcBytes[4] & 0xFF) << 24) |
-                             ((crcBytes[3] & 0xFF) << 16) |
-                             ((crcBytes[2] & 0xFF) << 8) |
-                              (crcBytes[1] & 0xFF);
+            finalResult.write(packetBytes);
 
             if (DEBUG) {
-                System.err.printf("readDataSubpacket(): " +
-                    "DATA CRC32: given    %08x\n", givenCrc32);
-                System.err.printf("readDataSubpacket(): " +
-                    "DATA CRC32: computed %08x\n", crc32);
+                System.err.printf("readDataSubpacket() %d bytes CRC OK\n",
+                    packetBytes.length);
             }
-
-            if (crc32 != givenCrc32) {
-                return false;
-            }
-        } else {
-            int crc16 = Crc.computeCrc16(0, crcInput, crcInput.length);
-            int givenCrc16 = ((crcBytes[1] & 0xFF) << 8) |
-                              (crcBytes[2] & 0xFF);
-
-            if (DEBUG) {
-                System.err.printf("readDataSubpacket(): " +
-                    "DATA CRC16: given    %04x\n", givenCrc16);
-                System.err.printf("readDataSubpacket(): " +
-                    "DATA CRC16: computed %04x\n", crc16);
-            }
-
-            if (crc16 != givenCrc16) {
-                return false;
-            }
-        }
+        } /* while (!endHeader) */
 
         /*
          * All is good: we have data and a valid CRC.  Let the subclass parse
          * data and then return.
          */
-        parseDataSubpacket(packetBytes);
+        parseDataSubpacket(finalResult.toByteArray());
         return true;
     }
 

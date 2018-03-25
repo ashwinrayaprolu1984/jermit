@@ -30,6 +30,7 @@ package jermit.protocol.zmodem;
 
 import java.io.EOFException;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -84,6 +85,11 @@ public class ZmodemSender implements Runnable {
      * session.
      */
     private int currentFile = -1;
+
+    /**
+     * The current block size.
+     */
+    private int blockSize = 1024;
 
     // ------------------------------------------------------------------------
     // Constructors -----------------------------------------------------------
@@ -158,6 +164,22 @@ public class ZmodemSender implements Runnable {
                     sendBeginWait();
                     break;
 
+                case ZSINIT:
+                    sendInit();
+                    break;
+
+                case ZSINIT_WAIT:
+                    sendInitWait();
+                    break;
+
+                case ZFILE:
+                    sendFile();
+                    break;
+
+                case ZFILE_WAIT:
+                    sendFileWait();
+                    break;
+
 
 
 
@@ -230,7 +252,347 @@ public class ZmodemSender implements Runnable {
     // ZmodemSender -----------------------------------------------------------
     // ------------------------------------------------------------------------
 
+    /**
+     * Send a ZRQINIT to prompt the other side to send a ZRINIT.
+     *
+     * @throws IOException if a java.io operation throws
+     */
+    private void sendBegin() throws IOException {
+        if (DEBUG) {
+            System.err.println("sendBegin() sending ZRQINIT...");
+        }
+        ZRQInit zrqInit = new ZRQInit();
+        session.sendHeader(zrqInit);
+        session.zmodemState = ZmodemState.ZRQINIT_WAIT;
+        session.setCurrentStatus("SENDING ZRQINIT");
+    }
 
+    /**
+     * Wait for a ZRINIT or ZCHALLENGE.
+     *
+     * @throws IOException if a java.io operation throws
+     */
+    private void sendBeginWait() throws ReadTimeoutException, EOFException,
+                                           IOException,
+                                           ZmodemCancelledException {
+
+        if (DEBUG) {
+            System.err.println("sendBeginWait() waiting for response...");
+        }
+        session.setCurrentStatus("WAITING FOR ZRINIT");
+
+        Header header = session.getHeader();
+        if (header.parseState != Header.ParseState.OK) {
+            // We had an error.  Resend the ZRQINIT.
+            session.zmodemState = ZmodemState.ZRQINIT;
+        } else if (header instanceof ZChallenge) {
+            // TODO: respond to ZCHALLENGE
+
+
+        } else if (header instanceof ZRInit) {
+            // We got the remote side's ZRInit
+            session.setCurrentStatus("ZRINIT");
+
+            ZRInit zrInit = (ZRInit) header;
+
+            // See what options were specified
+            if ((zrInit.getFlags() & ZRInit.TX_ESCAPE_CTRL) != 0) {
+                session.escapeControlChars = true;
+                if (DEBUG) {
+                    System.err.println("sendBeginWait() TX_ESCAPE_CTRL");
+                }
+            }
+            if ((zrInit.getFlags() & ZRInit.TX_ESCAPE_8BIT) != 0) {
+                session.escape8BitChars = true;
+                if (DEBUG) {
+                    System.err.println("sendBeginWait() TX_ESCAPE_8BIT");
+                }
+            }
+            if ((zrInit.getFlags() & ZRInit.TX_CAN_FULL_DUPLEX) != 0) {
+                if (DEBUG) {
+                    System.err.println("sendBeginWait() TX_CAN_FULL_DUPLEX");
+                }
+            }
+            if ((zrInit.getFlags() & ZRInit.TX_CAN_OVERLAP_IO) != 0) {
+                if (DEBUG) {
+                    System.err.println("sendBeginWait() TX_CAN_OVERLAP_IO");
+                }
+            }
+            if ((zrInit.getFlags() & ZRInit.TX_CAN_BREAK) != 0) {
+                if (DEBUG) {
+                    System.err.println("sendBeginWait() TX_CAN_BREAK");
+                }
+            }
+            if ((zrInit.getFlags() & ZRInit.TX_CAN_DECRYPT) != 0) {
+                if (DEBUG) {
+                    System.err.println("sendBeginWait() TX_CAN_DECRYPT");
+                }
+            }
+            if ((zrInit.getFlags() & ZRInit.TX_CAN_LZW) != 0) {
+                if (DEBUG) {
+                    System.err.println("sendBeginWait() TX_CAN_LZW");
+                }
+            }
+            if ((zrInit.getFlags() & ZRInit.TX_CAN_CRC32) != 0) {
+                session.useCrc32 = true;
+                if (DEBUG) {
+                    System.err.println("sendBeginWait() TX_CAN_CRC32");
+                }
+            }
+
+            // Update the encode map
+            session.setupEncodeByteMap();
+
+            // Move to the next state
+            session.zmodemState = ZmodemState.ZSINIT;
+        } else if (header instanceof ZAbort) {
+            // Remote side signalled error
+            session.abort("ZABORT");
+            session.cancelFlag = 1;
+        } else {
+            // Something else came in I'm not looking for.  This will always
+            // be a protocol error.
+            session.abort("PROTOCOL ERROR");
+            session.cancelFlag = 1;
+        }
+    }
+
+    /**
+     * Send a ZSINIT to prompt the other side to send ZACK.
+     *
+     * @throws IOException if a java.io operation throws
+     */
+    private void sendInit() throws IOException {
+        if (DEBUG) {
+            System.err.println("sendInit() sending ZSINIT...");
+        }
+        ZSInit zsInit = new ZSInit(session);
+        session.sendHeader(zsInit);
+        session.zmodemState = ZmodemState.ZSINIT_WAIT;
+        session.setCurrentStatus("SENDING ZSINIT");
+    }
+
+    /**
+     * Wait for a ZACK.
+     *
+     * @throws IOException if a java.io operation throws
+     */
+    private void sendInitWait() throws ReadTimeoutException, EOFException,
+                                       IOException, ZmodemCancelledException {
+
+        if (DEBUG) {
+            System.err.println("sendInitWait() waiting for response...");
+        }
+        session.setCurrentStatus("WAITING FOR ZSINIT");
+
+        Header header = session.getHeader();
+        if (header.parseState != Header.ParseState.OK) {
+            // We had an error.  Resend the ZSINIT.
+            session.zmodemState = ZmodemState.ZSINIT;
+        } else if (header instanceof ZAck) {
+            session.setCurrentStatus("ZACK");
+
+            // Move to the next state
+            session.zmodemState = ZmodemState.ZFILE;
+        } else if (header instanceof ZRInit) {
+            // Receiver has repeated its ZRINIT because we were out of sync
+            // with the ZRQINIT.  Ignore it.
+        } else if (header instanceof ZAbort) {
+            // Remote side signalled error
+            session.abort("ZABORT");
+            session.cancelFlag = 1;
+        } else {
+            // Something else came in I'm not looking for.  This will always
+            // be a protocol error.
+            session.abort("PROTOCOL ERROR");
+            session.cancelFlag = 1;
+        }
+    }
+
+    /**
+     * Send a ZSINIT to prompt the other side to send ZACK.
+     *
+     * @throws IOException if a java.io operation throws
+     */
+    private void sendFile() throws IOException {
+        if (DEBUG) {
+            System.err.println("sendFile() opening file...");
+        }
+        synchronized (session) {
+            currentFile++;
+            if (currentFile == session.getFiles().size()) {
+                if (DEBUG) {
+                    System.err.println("No more files");
+                }
+                // End of transfer.
+                session.zmodemState = ZmodemState.ZEOF;
+                return;
+            }
+            session.setCurrentFile(currentFile);
+            session.setState(SerialFileTransferSession.State.TRANSFER);
+            file = session.getCurrentFile();
+            setFile = session.getCurrentFileInfoModifier();
+            setFile.setStartTime(System.currentTimeMillis());
+        }
+
+        // Open the file.  Local try/catch to separate the read error
+        // message from the generic network I/O error message.
+        try {
+            fileInput = file.getLocalFile().getInputStream();
+        } catch (IOException e) {
+            if (DEBUG) {
+                e.printStackTrace();
+            }
+            session.abort("UNABLE TO READ FROM FILE " + file.getLocalName());
+            session.cancelFlag = 1;
+            return;
+        }
+
+        // Now that we have a transfer agreed to, and the file open, we can
+        // update the file's total information for the UI.
+        synchronized (session) {
+            setFile.setBlockSize(session.getBlockSize());
+            setFile.setBytesTotal(file.getLocalFile().getLength());
+            setFile.setBlocksTotal(file.getBytesTotal() /
+                session.getBlockSize());
+            if (file.getBlocksTotal() * session.getBlockSize() <
+                file.getBytesTotal()
+            ) {
+                setFile.setBlocksTotal(file.getBlocksTotal() + 1);
+            }
+            session.setBytesTotal(file.getBytesTotal());
+        }
+
+        // Put together the ZFILE header.
+        String filename = file.getLocalName();
+        if (DEBUG) {
+            System.err.printf("Next file to upload: '%s' size %d\n",
+                filename, file.getLocalFile().getLength());
+        }
+        String filePart = (new File(filename)).getName();
+        ZFile zFile = new ZFile(filePart, file.getSize(), file.getModTime());
+        filePosition = 0;
+        session.sendHeader(zFile);
+        session.setCurrentStatus("SENDING FILE");
+
+        // Move to the next state
+        session.zmodemState = ZmodemState.ZFILE_WAIT;
+    }
+
+    /**
+     * Wait for a ZACK, ZRPOS, ZSKIP, or ZCRC.
+     *
+     * @throws IOException if a java.io operation throws
+     */
+    private void sendFileWait() throws ReadTimeoutException, EOFException,
+                                       IOException, ZmodemCancelledException {
+
+        if (DEBUG) {
+            System.err.println("sendFileWait() waiting for response...");
+        }
+        session.setCurrentStatus("WAITING FOR ZRPOS");
+
+        Header header = session.getHeader();
+        if (header.parseState != Header.ParseState.OK) {
+            // We had an error.  Resend the ZFILE.
+            session.zmodemState = ZmodemState.ZFILE;
+        } else if (header instanceof ZRPos) {
+            session.setCurrentStatus("ZRPOS");
+
+            ZRPos zrPos = (ZRPos) header;
+            long remotePosition = zrPos.getPosition();
+            if (remotePosition != filePosition) {
+                // Seek to the requested file position.
+                if (fileInput instanceof FileInputStream) {
+                    ((FileInputStream) fileInput).getChannel().
+                        position(remotePosition);
+                    filePosition = remotePosition;
+                } else {
+                    // TODO: handle different kinds of LocalFile.
+                }
+            }
+            while (sendData()) {
+                // Keep sending data until EOF or ack required.
+            }
+        } else if (header instanceof ZAck) {
+            // File data OK, continue on.
+            while (sendData()) {
+                // Keep sending data until EOF or ack required.
+            }
+        } else if (header instanceof ZAbort) {
+            // Remote side signalled error
+            session.abort("ZABORT");
+            session.cancelFlag = 1;
+        } else {
+            // Something else came in I'm not looking for.  This will always
+            // be a protocol error.
+            session.abort("PROTOCOL ERROR");
+            session.cancelFlag = 1;
+        }
+    }
+
+    /**
+     * Send a ZData header and subpacket.
+     *
+     * @return true if the subpacket should continue
+     * @throws IOException if a java.io operation throws
+     * @throws ZmodemCancelledException if three Ctrl-C's are encountered in
+     * a row
+     */
+    private boolean sendData() throws IOException, ZmodemCancelledException {
+
+        if (DEBUG) {
+            System.err.printf("sendData() sending data subpacket at %d\n",
+                filePosition);
+        }
+
+        // DEBUG: ask for ack on every subpacket
+        session.crcType = Header.ZCRCE;
+
+        // Read another subpacket's worth from the file and send it out.
+        // session.sendHeader() will call header.encode() which performs the
+        // actual reading.
+        ZData dataHeader = new ZData(fileInput, filePosition, blockSize);
+        if (dataHeader.eof) {
+            session.crcType = Header.ZCRCW;
+        }
+        long sentBytes = dataHeader.getFileData().length;
+        filePosition += sentBytes;
+        session.sendHeader(dataHeader);
+        session.setCurrentStatus("DATA");
+
+        // Increment stats.
+        synchronized (session) {
+            setFile.setBytesTransferred(file.getBytesTransferred() +
+                sentBytes);
+            setFile.setBlocksTransferred(file.getBytesTransferred() /
+                session.getBlockSize());
+            session.setBytesTransferred(session.getBytesTransferred() +
+                sentBytes);
+            session.setBlocksTransferred(session.getBytesTransferred() /
+                session.getBlockSize());
+            session.setLastBlockMillis(System.currentTimeMillis());
+        }
+
+        if ((dataHeader.eof == true)
+            || (session.crcType == Header.ZCRCQ)
+            || (session.crcType == Header.ZCRCW)
+        ) {
+            return false;
+        }
+        return true;
+
+        // TODO
+        /*
+        // If this was our last header, switch to EOF.
+        if (dataHeader.eof) {
+            session.zmodemState = ZmodemState.ZEOF;
+            synchronized (session) {
+                setFile.setBlocksTransferred(file.getBlocksTotal());
+            }
+        }
+        */
+    }
 
     /**
      * Get the session.
@@ -271,61 +633,6 @@ public class ZmodemSender implements Runnable {
     public void skipFile(boolean keepPartial) {
         synchronized (session) {
             session.skipFile(keepPartial);
-        }
-    }
-
-    /**
-     * Send a ZRQINIT to prompt the other side to send a ZRINIT.
-     *
-     * @throws IOException if a java.io operation throws
-     */
-    private void sendBegin() throws IOException {
-        if (DEBUG) {
-            System.err.println("sendBegin() sending ZRQINIT...");
-        }
-        ZRQInit zrqInit = new ZRQInit();
-        session.sendHeader(zrqInit);
-        session.zmodemState = ZmodemState.ZRQINIT_WAIT;
-        session.setCurrentStatus("SENDING ZRQINIT");
-    }
-
-    /**
-     * Wait for a ZRINIT or ZCHALLENGE.
-     *
-     * @throws IOException if a java.io operation throws
-     */
-    private void sendBeginWait() throws ReadTimeoutException, EOFException,
-                                           IOException,
-                                           ZmodemCancelledException {
-
-        if (DEBUG) {
-            System.err.println("sendBeginWait() waiting for response...");
-        }
-        session.setCurrentStatus("WAITING FOR ZRINIT");
-
-        Header header = session.getHeader(0);
-        if (header.parseState != Header.ParseState.OK) {
-            // We had an error.  NAK it.
-            session.sendZNak();
-        } else if (header instanceof ZRInit) {
-            // We got the remote side's ZRInit
-            session.setCurrentStatus("ZRINIT");
-
-            // TODO: look at ZRInit
-
-
-
-            // Move to the next state
-            session.zmodemState = ZmodemState.ZFILE;
-        } else if (header instanceof ZAbort) {
-            // Remote side signalled error
-            session.abort("ZABORT");
-            session.cancelFlag = 1;
-        } else {
-            // Something else came in I'm not looking for.  This will always
-            // be a protocol error.
-            session.abort("PROTOCOL ERROR");
-            session.cancelFlag = 1;
         }
     }
 

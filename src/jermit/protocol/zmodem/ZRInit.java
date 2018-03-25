@@ -118,4 +118,13 @@ class ZRInit extends Header {
     // Header -----------------------------------------------------------------
     // ------------------------------------------------------------------------
 
+    /**
+     * Get the flags from the remote side.
+     *
+     * @return the flags
+     */
+    public int getFlags() {
+        return data;
+    }
+
 }

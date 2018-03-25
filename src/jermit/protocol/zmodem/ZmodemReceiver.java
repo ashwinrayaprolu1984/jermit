@@ -286,7 +286,7 @@ public class ZmodemReceiver implements Runnable {
         }
         session.setCurrentStatus("WAITING FOR ZACK TO ZCHALLENGE");
 
-        Header header = session.getHeader(0);
+        Header header = session.getHeader();
         if (header.parseState != Header.ParseState.OK) {
             // We had an error.  NAK it.
             session.sendZNak();
@@ -350,7 +350,7 @@ public class ZmodemReceiver implements Runnable {
         }
         session.setCurrentStatus("WAITING FOR ZRQINIT");
 
-        Header header = session.getHeader(0);
+        Header header = session.getHeader();
         if (header.parseState != Header.ParseState.OK) {
             // We had an error.  NAK it.
             session.sendZNak();
@@ -368,13 +368,13 @@ public class ZmodemReceiver implements Runnable {
             if ((zsInit.getFlags() & ZRInit.TX_ESCAPE_CTRL) != 0) {
                 session.escapeControlChars = true;
                 if (DEBUG) {
-                    System.err.println("receiveBeginWait() ZSINIT TX_ESCAPE_CTRL");
+                    System.err.println("receiveBeginWait() TX_ESCAPE_CTRL");
                 }
             }
             if ((zsInit.getFlags() & ZRInit.TX_ESCAPE_8BIT) != 0) {
                 session.escape8BitChars = true;
                 if (DEBUG) {
-                    System.err.println("receiveBeginWait() ZSINIT TX_ESCAPE_8BIT");
+                    System.err.println("receiveBeginWait() TX_ESCAPE_8BIT");
                 }
             }
 
@@ -402,6 +402,9 @@ public class ZmodemReceiver implements Runnable {
             // Move to the next state
             session.zmodemState = ZmodemState.ZRPOS;
         } else if (header instanceof ZFin) {
+            // Send the completion ZFIN
+            session.sendHeader(new ZFin());
+
             // Transfer has ended
             synchronized (session) {
                 session.addInfoMessage("SUCCESS");

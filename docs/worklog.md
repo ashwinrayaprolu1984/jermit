@@ -1,3 +1,14 @@
+March 25, 2018
+
+Zmodem send is slowly coming along.  The data subpacket encoding is
+not 100% yet, it is generating invalid CRCs sometimes, and it has
+holes punched in for the CRC type.  But it is about halfway there
+overall now, enough to use Qodem's debugging to figure out what is
+going wrong.
+
+Gonna be slow going the next couple weeks though.  Fighting off an ear
+infection and spring is coming so need more outside time.
+
 March 16, 2018
 
 Got a full receiver working!  Woot!  This one has ZCHALLENGE but not

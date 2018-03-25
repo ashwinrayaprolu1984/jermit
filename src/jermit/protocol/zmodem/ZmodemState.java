@@ -130,7 +130,7 @@ enum ZmodemState {
     ZEOF,
 
     /**
-     * Sender: waiting for ZRPOS.
+     * Sender: waiting for ZRINIT.
      */
     ZEOF_WAIT,
 

@@ -40,6 +40,8 @@ import jermit.protocol.xmodem.XmodemReceiver;
 import jermit.protocol.xmodem.XmodemSender;
 import jermit.protocol.ymodem.YmodemReceiver;
 import jermit.protocol.ymodem.YmodemSender;
+import jermit.protocol.zmodem.ZmodemReceiver;
+import jermit.protocol.zmodem.ZmodemSender;
 
 import jermit.ui.qodem.jexer.bits.Color;
 import jermit.ui.qodem.jexer.bits.CellAttributes;
@@ -71,8 +73,10 @@ public class QodemUI implements Runnable {
     XmodemReceiver xmodemReceiver;
     YmodemSender ymodemSender;
     YmodemReceiver ymodemReceiver;
-    KermitReceiver kermitReceiver;
+    ZmodemSender zmodemSender;
+    ZmodemReceiver zmodemReceiver;
     KermitSender kermitSender;
+    KermitReceiver kermitReceiver;
 
     /**
      * Input events are processed by this Terminal.
@@ -262,6 +266,12 @@ public class QodemUI implements Runnable {
                     if (ymodemSender != null) {
                         ymodemSender.cancelTransfer(true);
                     }
+                    if (zmodemReceiver != null) {
+                        zmodemReceiver.cancelTransfer(true);
+                    }
+                    if (zmodemSender != null) {
+                        zmodemSender.cancelTransfer(true);
+                    }
                     if (kermitReceiver != null) {
                         kermitReceiver.cancelTransfer(true);
                     }
@@ -283,6 +293,12 @@ public class QodemUI implements Runnable {
                     }
                     if (ymodemSender != null) {
                         ymodemSender.skipFile(true);
+                    }
+                    if (zmodemReceiver != null) {
+                        zmodemReceiver.skipFile(true);
+                    }
+                    if (zmodemSender != null) {
+                        zmodemSender.skipFile(true);
                     }
                     if (kermitReceiver != null) {
                         kermitReceiver.skipFile(true);

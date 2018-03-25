@@ -28,6 +28,9 @@
  */
 package jermit.protocol.zmodem;
 
+import java.io.InputStream;
+import java.io.IOException;
+
 /**
  * Zdata contains a file position and some file data.
  */
@@ -41,6 +44,11 @@ class ZData extends Header {
      * File data bytes.
      */
     private byte [] fileData;
+
+    /**
+     * If true, file is at EOF.  Note package private access.
+     */
+    boolean eof = false;
 
     // ------------------------------------------------------------------------
     // Constructors -----------------------------------------------------------
@@ -62,6 +70,30 @@ class ZData extends Header {
         super(Type.ZDATA, (byte) 0x0A, "ZDATA", data);
 
         fileData = new byte[0];
+    }
+
+    /**
+     * Public constructor.
+     *
+     * @param input stream to read file data from
+     * @param position the current position of the file
+     * @param blockSize number of bytes to try to read
+     * @throws IOException if a java.io operation throws
+     */
+    public ZData(final InputStream input, final long position,
+        final int blockSize) throws IOException {
+
+        super(Type.ZDATA, (byte) 0x0A, "ZDATA", (int) position);
+
+        fileData = new byte[blockSize];
+        int rc = input.read(fileData, 0, blockSize);
+        if (rc == -1) {
+            eof = true;
+        } else if (rc < fileData.length) {
+            byte [] oldFileData = fileData;
+            fileData = new byte[rc];
+            System.arraycopy(oldFileData, 0, fileData, 0, fileData.length);
+        }
     }
 
     // ------------------------------------------------------------------------

@@ -6,9 +6,8 @@ Jermit TODO List
   BUG: increment consecutive error counts for Kermit and Zmodem
 
   Zmodem:
-    ZmodemSession
-    ZmodemReceiver
     ZmodemSender
+    ZFile --> ZFileHeader etc.
 
 0.1.1:
 

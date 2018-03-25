@@ -45,6 +45,9 @@ import jermit.protocol.xmodem.XmodemSession;
 import jermit.protocol.ymodem.YmodemReceiver;
 import jermit.protocol.ymodem.YmodemSender;
 import jermit.protocol.ymodem.YmodemSession;
+import jermit.protocol.zmodem.ZmodemReceiver;
+import jermit.protocol.zmodem.ZmodemSender;
+import jermit.protocol.zmodem.ZmodemSession;
 import jermit.ui.posix.Stty;
 
 /**
@@ -174,6 +177,8 @@ public class Jermit {
         XmodemSender sx = null;
         YmodemReceiver rb = null;
         YmodemSender sb = null;
+        ZmodemReceiver rz = null;
+        ZmodemSender sz = null;
         KermitReceiver rk = null;
         KermitSender sk = null;
 
@@ -243,9 +248,15 @@ public class Jermit {
             break;
 
         case ZMODEM:
-            // TODO
-            System.err.println("Zmodem not yet supported.");
-            System.exit(10);
+            if (download == true) {
+                rz = new ZmodemReceiver(in, out, downloadPath);
+                session = rz.getSession();
+                transferThread = new Thread(rz);
+            } else {
+                sz = new ZmodemSender(in, out, fileArgs);
+                session = sz.getSession();
+                transferThread = new Thread(sz);
+            }
             break;
 
         case KERMIT:
@@ -273,6 +284,8 @@ public class Jermit {
         ui.xmodemSender = sx;
         ui.ymodemReceiver = rb;
         ui.ymodemSender = sb;
+        ui.zmodemReceiver = rz;
+        ui.zmodemSender = sz;
         ui.kermitReceiver = rk;
         ui.kermitSender = sk;
         uiThread = new Thread(ui);

@@ -66,8 +66,11 @@ class ZRPos extends Header {
      *
      * @return the value
      */
-    public int getPosition() {
-        return data;
+    public long getPosition() {
+        if (data < 0) {
+            return ((long) data) + 4294967296L;
+        }
+        return ((long) data);
     }
 
 }

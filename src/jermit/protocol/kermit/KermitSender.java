@@ -611,7 +611,7 @@ public class KermitSender implements Runnable {
     private void sendData() throws IOException, KermitCancelledException {
 
         if (DEBUG) {
-            System.err.printf("sendFileData() sending data packet at %d\n",
+            System.err.printf("sendData() sending data packet at %d\n",
                 filePosition);
         }
 

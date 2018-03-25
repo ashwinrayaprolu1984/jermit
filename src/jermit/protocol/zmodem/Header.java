@@ -32,6 +32,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
 import java.io.InputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -78,24 +79,26 @@ class Header {
     private static final byte ZPAD = '*';
 
     /**
-     * CRC next, frame ends, header packet follows.
+     * CRC next, frame ends, header packet follows.  Note package private
+     * access.
      */
-    private static final byte ZCRCE = 'h';
+    static final byte ZCRCE = 'h';
 
     /**
-     * CRC next, frame continues nonstop.
+     * CRC next, frame continues nonstop.  Note package private access.
      */
-    private static final byte ZCRCG = 'i';
+    static final byte ZCRCG = 'i';
 
     /**
-     * CRC next, frame continues, ZACK expected.
+     * CRC next, frame continues, ZACK expected.  Note package private
+     * access.
      */
-    private static final byte ZCRCQ = 'j';
+    static final byte ZCRCQ = 'j';
 
     /**
-     * CRC next, ZACK expected, end of frame.
+     * CRC next, ZACK expected, end of frame.  Note package private access.
      */
-    private static final byte ZCRCW = 'k';
+    static final byte ZCRCW = 'k';
 
     // ------------------------------------------------------------------------
     // Variables --------------------------------------------------------------
@@ -602,10 +605,12 @@ class Header {
      * transmitting on the wire.
      *
      * @param session the ZmodemSession
+     * @param offset initial place in the ZDATA stream
      * @return encoded bytes
      * @throws IOException if a java.io operation throws
      */
-    public byte [] encode(final ZmodemSession session) throws IOException {
+    public byte [] encode(final ZmodemSession session,
+        final long offset) throws IOException {
 
         if (DEBUG) {
             System.err.printf("encode(): type = %s (%d) data = %08x\n",
@@ -806,6 +811,24 @@ class Header {
                 session.setupEncodeByteMap();
             }
         }
+
+        /*
+         * Write data subpacket but only for certain header types.
+         */
+        switch (type) {
+        case ZSINIT:
+        case ZFILE:
+        case ZDATA:
+        case ZCOMMAND:
+            /*
+             * Data "subpacket" follows, write it.
+             */
+            writeDataSubpacket(session, output, useCrc32, offset);
+            break;
+        default:
+            break;
+        }
+
 
         /*
          * All done.
@@ -1088,11 +1111,9 @@ class Header {
         case 0x04:
             header = new ZFile(dataField);
             break;
-        /*
         case 0x05:
-            type_string = "ZSKIP";
+            header = new ZSkip(dataField);
             break;
-        */
         case 0x06:
             header = new ZNak(dataField);
             break;
@@ -1511,6 +1532,135 @@ class Header {
          */
         parseDataSubpacket(finalResult.toByteArray());
         return true;
+    }
+
+    /**
+     * Get the data subpacket raw bytes.  Used by subclasses to serialize
+     * fields into data.
+     *
+     * @return the bytes of the subpacket
+     */
+    protected byte [] createDataSubpacket() {
+        return new byte[0];
+    }
+
+    /**
+     * Call createDataSubpacket() and then encode it.
+     *
+     * @param session the ZmodemSession
+     * @param output stream to write to
+     * @param useCrc32 if true, write a 32-bit CRC
+     * @param offset initial place in the ZDATA stream
+     * @throws IOException if a java.io operation throws
+     */
+    private void writeDataSubpacket(final ZmodemSession session,
+        final OutputStream output, final boolean useCrc32,
+        final long offset) throws IOException {
+
+        if (DEBUG) {
+            System.err.printf("writeDataSubpacket() %s\n",
+                (useCrc32 ? "CRC32" : "CRC16"));
+        }
+
+        byte [] rawData = createDataSubpacket();
+
+        int crc16;
+        int crc32;
+        boolean doingCrc = false;
+        ByteArrayOutputStream crcBuffer = new ByteArrayOutputStream();
+        ByteArrayOutputStream result = new ByteArrayOutputStream();
+        byte [] crcBytes = null;
+        int crcLength = 2;
+
+        for (int i = 0; ; i++) {
+            byte ch;
+
+            if (doingCrc == false) {
+                if (i == rawData.length) {
+                    /*
+                     * Add the link escape sequence
+                     */
+                    output.write(C_CAN);
+                    output.write(session.crcType);
+
+                    /*
+                     * Compute the CRC
+                     */
+                    if ((useCrc32 == true) /* && (type != Type.ZSINIT) */ ) {
+
+                        crcLength = 4;
+                        crc32 = Crc.computeCrc32(0, null, 0);
+
+                        /*
+                         * Another case of *strange* CRC behavior...
+                         */
+                        for (int j = 0; j < rawData.length; j++) {
+                            crc32 = ~Crc.computeCrc32(crc32, rawData[j]);
+                        }
+                        crc32 = ~Crc.computeCrc32(crc32, session.crcType);
+                        crc32 = ~crc32;
+
+                        if (DEBUG) {
+                            System.err.printf("writeDataSubpacket(): " +
+                                "DATA CRC32: %08x\n", crc32);
+                        }
+
+                        /*
+                         * Little-endian
+                         */
+                        crcBuffer.write( crc32         & 0xFF);
+                        crcBuffer.write((crc32 >>>  8) & 0xFF);
+                        crcBuffer.write((crc32 >>> 16) & 0xFF);
+                        crcBuffer.write((crc32 >>> 24) & 0xFF);
+
+                    } else {
+                        /*
+                         * 16-bit CRC
+                         */
+                        crcLength = 2;
+                        crc16 = Crc.computeCrc16(0, rawData, rawData.length);
+                        crc16 = Crc.computeCrc16(crc16, session.crcType);
+
+                        if (DEBUG) {
+                            System.err.printf("writeDataSubpacket(): " +
+                                "DATA CRC16: %04x\n", crc16);
+                        }
+
+                        /*
+                         * Big-endian
+                         */
+                        crcBuffer.write((crc16 >>> 8) & 0xFF);
+                        crcBuffer.write( crc16        & 0xFF);
+                    }
+
+                    doingCrc = true;
+                    i = -1;
+                    crcBytes = crcBuffer.toByteArray();
+                    continue;
+                } else {
+                    ch = rawData[i];
+                }
+            } else {
+                if (i >= crcLength) {
+                    break;
+                }
+                ch = crcBytes[i];
+            }
+
+            /*
+             * Encode the byte
+             */
+            output.write(encodeByte(ch, session));
+
+        } /* for (i = 0; i < rawData.length; i++) */
+
+        /*
+         * One type of packet is terminated "special"
+         */
+        if (session.crcType == ZCRCW) {
+            output.write(C_XON);
+        }
+
     }
 
 }

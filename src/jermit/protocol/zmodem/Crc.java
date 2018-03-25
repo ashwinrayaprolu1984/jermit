@@ -126,6 +126,18 @@ class Crc {
     }
 
     /**
+     * Update a CRC with one additional byte.
+     *
+     * @param oldCrc the old CRC value
+     * @param ch the byte to add to the CRC
+     */
+    public static int computeCrc32(final int oldCrc, final byte ch) {
+        int crc = oldCrc;
+        crc = (crc >>> 8) ^ crc32Table[(crc ^ ch) & 0xff];
+        return crc ^ 0xffffffff;        /* Invert */
+    }
+
+    /**
      * Compute a CRC on the given buffer and length using a static CRC
      * accumulator.  If buf is NULL this initializes the accumulator,
      * otherwise it updates it to include the additional data and
@@ -139,9 +151,8 @@ class Crc {
      */
     public static int computeCrc32(final int oldCrc, final byte [] buf,
         final int len) {
-
         if (buf != null) {
-            assert (len > 0);
+            assert (len >= 0);
             assert (len <= buf.length);
 
             int crc = oldCrc;
@@ -167,7 +178,7 @@ class Crc {
     public static int computeCrc16(final int oldCrc, final byte [] buf,
         final int len) {
 
-        assert (len > 0);
+        assert (len >= 0);
         assert (len <= buf.length);
 
         int crc = oldCrc;
@@ -179,6 +190,26 @@ class Crc {
                 } else {
                     crc = crc << 1;
                 }
+            }
+        }
+        return (crc & 0xFFFF);
+    }
+
+    /**
+     * This CRC16 routine was transliterated from XYMODEM.DOC.
+     *
+     * @param oldCrc the old CRC
+     * @param ch the next byte
+     * @return an integer which contains the CRC
+     */
+    public static int computeCrc16(final int oldCrc, final byte ch) {
+        int crc = oldCrc;
+        crc = crc ^ (ch << 8);
+        for (int j = 0; j < 8; j++) {
+            if ((crc & 0x8000) != 0) {
+                crc = (crc << 1) ^ 0x1021;
+            } else {
+                crc = crc << 1;
             }
         }
         return (crc & 0xFFFF);

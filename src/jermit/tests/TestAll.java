@@ -127,7 +127,7 @@ public class TestAll {
              * ZMODEM ---------------------------------------------------------
              */
 
-            if (true) {
+            if (false) {
 
             /*
              * Basic uploads and downloads - clean line.
@@ -137,7 +137,7 @@ public class TestAll {
             (new Zmodem3()).doTest();
             }
 
-            if (false) {
+            if (true) {
             (new Zmodem4()).doTest();
             (new Zmodem5()).doTest();
 

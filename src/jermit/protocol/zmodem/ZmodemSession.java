@@ -56,7 +56,7 @@ public class ZmodemSession extends SerialFileTransferSession {
     // ------------------------------------------------------------------------
 
     // If true, enable some debugging output.  Note package private access.
-    static final boolean DEBUG = false;
+    static final boolean DEBUG = true;
 
     /**
      * The number of consecutive errors.  After 10 errors, the transfer is
@@ -93,7 +93,7 @@ public class ZmodemSession extends SerialFileTransferSession {
     /**
      * The size of the last block transferred.  Note package private access.
      */
-    int lastBlockSize = 128;
+    int lastBlockSize = 1024;
 
     /**
      * Skip file mode.  0 = do nothing, 1 = skip this file and keep the
@@ -106,6 +106,11 @@ public class ZmodemSession extends SerialFileTransferSession {
      * If true, use 32-bit CRC.  Note package private access.
      */
     boolean useCrc32 = false;
+
+    /**
+     * CRC type byte for data subpackets.  Note package private access.
+     */
+    byte crcType = Header.ZCRCW;
 
     /**
      * If true, escape control characters.  Note package private access.
@@ -455,6 +460,21 @@ public class ZmodemSession extends SerialFileTransferSession {
     /**
      * Receive and decode a header from the wire.
      *
+     * @return header the header received
+     * @throws IOException if a java.io operation throws
+     * @throws ZmodemCancelledException if five Ctrl-X's are encountered in a
+     * row
+     */
+    protected Header getHeader() throws ReadTimeoutException,
+                                        EOFException, IOException,
+                                        ZmodemCancelledException {
+
+        return getHeader(0);
+    }
+
+    /**
+     * Receive and decode a header from the wire.
+     *
      * @param offset initial place in the ZDATA stream
      * @return header the header received
      * @throws IOException if a java.io operation throws
@@ -485,7 +505,20 @@ public class ZmodemSession extends SerialFileTransferSession {
      * @throws IOException if a java.io operation throws
      */
     protected void sendHeader(final Header header) throws IOException {
-        byte [] headerBytes = header.encode(this);
+        sendHeader(header, 0);
+    }
+
+    /**
+     * Encode and send a header onto the wire.
+     *
+     * @param header the header to send
+     * @param offset initial place in the ZDATA stream
+     * @throws IOException if a java.io operation throws
+     */
+    protected void sendHeader(final Header header,
+        final long offset) throws IOException {
+
+        byte [] headerBytes = header.encode(this, offset);
         output.write(headerBytes);
         output.flush();
 
@@ -507,7 +540,7 @@ public class ZmodemSession extends SerialFileTransferSession {
      */
     protected void sendZNak() throws IOException {
         Header header = new ZNak();
-        byte [] headerBytes = header.encode(this);
+        byte [] headerBytes = header.encode(this, 0);
         output.write(headerBytes);
         output.flush();
 

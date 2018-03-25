@@ -28,6 +28,7 @@
  */
 package jermit.protocol.zmodem;
 
+import java.io.File;
 import java.io.UnsupportedEncodingException;
 
 /**
@@ -72,6 +73,22 @@ class ZFile extends Header {
      */
     public ZFile(final int data) {
         super(Type.ZFILE, (byte) 0x04, "ZFILE", data);
+    }
+
+    /**
+     * Public constructor.
+     *
+     * @param filename name of file
+     * @param fileSize size of file
+     * @param fileModTime modification time of file
+     */
+    public ZFile(final String filename, final long fileSize,
+        final long fileModTime) {
+
+        this(0);
+        this.filename    = filename;
+        this.fileSize    = fileSize;
+        this.fileModTime = fileModTime;
     }
 
     // ------------------------------------------------------------------------
@@ -156,6 +173,34 @@ class ZFile extends Header {
             System.err.println("Name: '" + filename + "'");
             System.err.println("Size: " + fileSize + " bytes");
             System.err.println("Time: " + fileModTime + " seconds");
+        }
+    }
+
+    /**
+     * Get the data subpacket raw bytes.  Used by subclasses to serialize
+     * fields into data.
+     *
+     * @return the bytes of the subpacket
+     */
+    @Override
+    protected byte [] createDataSubpacket() {
+        try {
+            String filePart = (new File(filename)).getName();
+            byte [] name = filePart.getBytes("UTF-8");
+            byte [] size = Long.toString(fileSize).getBytes("UTF-8");
+            byte [] modtime = Long.toOctalString(
+            fileModTime / 1000).getBytes("UTF-8");
+            byte [] data = new byte[name.length + size.length +
+                modtime.length + 2];
+            System.arraycopy(name, 0, data, 0, name.length);
+            System.arraycopy(size, 0, data, name.length + 1, size.length);
+            data[name.length + size.length + 1] = ' ';
+            System.arraycopy(modtime, 0, data,
+                name.length + 1 + size.length + 1, modtime.length);
+            return data;
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
         }
     }
 

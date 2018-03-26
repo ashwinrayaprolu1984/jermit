@@ -91,6 +91,11 @@ public class ZmodemSender implements Runnable {
      */
     private int blockSize = 1024;
 
+    /**
+     * If true, we are waiting for ZRPOS or ZACK to complete a file.
+     */
+    private boolean needEofAck = false;
+
     // ------------------------------------------------------------------------
     // Constructors -----------------------------------------------------------
     // ------------------------------------------------------------------------
@@ -180,8 +185,21 @@ public class ZmodemSender implements Runnable {
                     sendFileWait();
                     break;
 
+                case ZEOF:
+                    sendEof();
+                    break;
 
+                case ZEOF_WAIT:
+                    sendEofWait();
+                    break;
 
+                case ZFIN:
+                    sendFin();
+                    break;
+
+                case ZFIN_WAIT:
+                    sendFinWait();
+                    break;
 
                 case COMPLETE:
                     done = true;
@@ -418,6 +436,9 @@ public class ZmodemSender implements Runnable {
         if (DEBUG) {
             System.err.println("sendFile() opening file...");
         }
+
+        needEofAck = false;
+
         synchronized (session) {
             currentFile++;
             if (currentFile == session.getFiles().size()) {
@@ -425,7 +446,7 @@ public class ZmodemSender implements Runnable {
                     System.err.println("No more files");
                 }
                 // End of transfer.
-                session.zmodemState = ZmodemState.ZEOF;
+                session.zmodemState = ZmodemState.ZFIN;
                 return;
             }
             session.setCurrentFile(currentFile);
@@ -501,6 +522,14 @@ public class ZmodemSender implements Runnable {
 
             ZRPos zrPos = (ZRPos) header;
             long remotePosition = zrPos.getPosition();
+            if ((needEofAck == true)
+                && (remotePosition == file.getLocalFile().getLength())
+            ) {
+                // We are at the final EOF.
+                session.zmodemState = ZmodemState.ZEOF;
+                return;
+            }
+
             if (remotePosition != filePosition) {
                 // Seek to the requested file position.
                 if (fileInput instanceof FileInputStream) {
@@ -511,14 +540,130 @@ public class ZmodemSender implements Runnable {
                     // TODO: handle different kinds of LocalFile.
                 }
             }
-            while (sendData()) {
+            while (sendData() && (session.input.available() == 0)) {
                 // Keep sending data until EOF or ack required.
             }
         } else if (header instanceof ZAck) {
+            ZAck zAck = (ZAck) header;
+            long remotePosition = Header.bigToLittleEndian(zAck.getData());
+            if ((needEofAck == true)
+                && (remotePosition == file.getLocalFile().getLength())
+            ) {
+                // We are at the final EOF.
+                session.zmodemState = ZmodemState.ZEOF;
+                return;
+            }
             // File data OK, continue on.
-            while (sendData()) {
+            while (sendData() && (session.input.available() == 0)) {
                 // Keep sending data until EOF or ack required.
             }
+        } else if (header instanceof ZAbort) {
+            // Remote side signalled error
+            session.abort("ZABORT");
+            session.cancelFlag = 1;
+        } else {
+            // Something else came in I'm not looking for.  This will always
+            // be a protocol error.
+            session.abort("PROTOCOL ERROR");
+            session.cancelFlag = 1;
+        }
+    }
+
+    /**
+     * Send a ZEOF to prompt the other side to send ZRINIT.
+     *
+     * @throws IOException if a java.io operation throws
+     */
+    private void sendEof() throws IOException {
+        if (DEBUG) {
+            System.err.println("sendInit() sending ZEOF...");
+        }
+        ZEof zEof = new ZEof((int) file.getLocalFile().getLength());
+        session.sendHeader(zEof);
+        session.zmodemState = ZmodemState.ZEOF_WAIT;
+        session.setCurrentStatus("SENDING ZEOF");
+    }
+
+    /**
+     * Wait for a ZRINIT.
+     *
+     * @throws IOException if a java.io operation throws
+     */
+    private void sendEofWait() throws ReadTimeoutException, EOFException,
+                                      IOException, ZmodemCancelledException {
+
+        if (DEBUG) {
+            System.err.println("sendEofWait() waiting for response...");
+        }
+        session.setCurrentStatus("WAITING FOR ZRINIT");
+
+        Header header = session.getHeader();
+        if (header.parseState != Header.ParseState.OK) {
+            // We had an error.  Resend the ZEOF.
+            session.zmodemState = ZmodemState.ZEOF;
+        } else if (header instanceof ZRInit) {
+            // We have completed this file.
+            synchronized (session) {
+                setFile.setBlocksTransferred(file.getBlocksTotal());
+            }
+
+            // Move to the next state
+            session.zmodemState = ZmodemState.ZFILE;
+        } else if (header instanceof ZAbort) {
+            // Remote side signalled error
+            session.abort("ZABORT");
+            session.cancelFlag = 1;
+        } else {
+            // Something else came in I'm not looking for.  This will always
+            // be a protocol error.
+            session.abort("PROTOCOL ERROR");
+            session.cancelFlag = 1;
+        }
+    }
+
+    /**
+     * Send a ZFIN to prompt the other side to send ZFIN.
+     *
+     * @throws IOException if a java.io operation throws
+     */
+    private void sendFin() throws IOException {
+        if (DEBUG) {
+            System.err.println("sendInit() sending ZFIN...");
+        }
+        ZFin zFin = new ZFin();
+        session.sendHeader(zFin);
+        session.zmodemState = ZmodemState.ZFIN_WAIT;
+        session.setCurrentStatus("SENDING ZFIN");
+    }
+
+    /**
+     * Wait for a ZFIN.
+     *
+     * @throws IOException if a java.io operation throws
+     */
+    private void sendFinWait() throws ReadTimeoutException, EOFException,
+                                      IOException, ZmodemCancelledException {
+
+        if (DEBUG) {
+            System.err.println("sendFinWait() waiting for response...");
+        }
+        session.setCurrentStatus("WAITING FOR ZFIN");
+
+        Header header = session.getHeader();
+        if (header.parseState != Header.ParseState.OK) {
+            // We had an error.  Resend the ZFIN.
+            session.zmodemState = ZmodemState.ZFIN;
+        } else if (header instanceof ZFin) {
+            // Write the "over-and-out" and call it done.
+            session.output.write('O');
+            session.output.write('O');
+            session.output.flush();
+
+            if (DEBUG) {
+                System.err.println("ALL TRANSFERS COMPLETE");
+            }
+            session.zmodemState = ZmodemState.COMPLETE;
+            session.setCurrentStatus("COMPLETE");
         } else if (header instanceof ZAbort) {
             // Remote side signalled error
             session.abort("ZABORT");
@@ -546,7 +691,7 @@ public class ZmodemSender implements Runnable {
                 filePosition);
         }
 
-        // DEBUG: ask for ack on every subpacket
+        // Default: stream along with a new header.
         session.crcType = Header.ZCRCE;
 
         // Read another subpacket's worth from the file and send it out.
@@ -574,24 +719,18 @@ public class ZmodemSender implements Runnable {
             session.setLastBlockMillis(System.currentTimeMillis());
         }
 
-        if ((dataHeader.eof == true)
-            || (session.crcType == Header.ZCRCQ)
+        // If this was our last header, switch to EOF.
+        if (dataHeader.eof) {
+            needEofAck = true;
+            return false;
+        }
+
+        if ((session.crcType == Header.ZCRCQ)
             || (session.crcType == Header.ZCRCW)
         ) {
             return false;
         }
         return true;
-
-        // TODO
-        /*
-        // If this was our last header, switch to EOF.
-        if (dataHeader.eof) {
-            session.zmodemState = ZmodemState.ZEOF;
-            synchronized (session) {
-                setFile.setBlocksTransferred(file.getBlocksTotal());
-            }
-        }
-        */
     }
 
     /**

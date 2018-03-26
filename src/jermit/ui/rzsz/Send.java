@@ -38,6 +38,7 @@ import jermit.protocol.xmodem.XmodemSender;
 import jermit.protocol.xmodem.XmodemSession;
 import jermit.protocol.ymodem.YmodemSender;
 import jermit.protocol.ymodem.YmodemSession;
+import jermit.protocol.zmodem.ZmodemSender;
 import jermit.ui.posix.Stty;
 
 /**
@@ -186,9 +187,11 @@ public class Send {
             transferThread = new Thread(sb);
             break;
         case ZMODEM:
-            // TODO
-            System.err.println("Zmodem not yet supported.");
-            System.exit(10);
+            ZmodemSender sz = new ZmodemSender(System.in, System.out, fileArgs);
+            session = sz.getSession();
+            log = new SerialSessionLogger(session);
+            sessionStatusThread = new Thread(log);
+            transferThread = new Thread(sz);
             break;
         case KERMIT:
             KermitSender sk = new KermitSender(System.in, System.out, fileArgs);

@@ -1,3 +1,17 @@
+March 26, 2018
+
+Zmodem send is now working!  This is a real first, the only time I
+have gotten Qodem's Zmodem functioning on another platform.  Turns out
+the real culprit I was facing yesterday was a) ZData not actually
+putting the file data where it would be serialized, and b) ZData not
+using the right endianness on the file offset.  But CRC was actually
+OK, and I now understand why Qodem's behaved weird (all that
+inverting).  I won't change Qodem, but Jermit's ZDATA encoder is much
+cleaner.
+
+Going to pack this up now.  Not quite ready to tag a release, but not
+far off either.
+
 March 25, 2018
 
 Zmodem send is slowly coming along.  The data subpacket encoding is

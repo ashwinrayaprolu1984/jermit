@@ -56,7 +56,7 @@ public class ZmodemSession extends SerialFileTransferSession {
     // ------------------------------------------------------------------------
 
     // If true, enable some debugging output.  Note package private access.
-    static final boolean DEBUG = true;
+    static final boolean DEBUG = false;
 
     /**
      * The number of consecutive errors.  After 10 errors, the transfer is
@@ -71,14 +71,14 @@ public class ZmodemSession extends SerialFileTransferSession {
     protected int cancelFlag = 0;
 
     /**
-     * The bytes received from the remote side.
+     * The bytes received from the remote side.  Note package private access.
      */
-    private EOFInputStream input;
+    EOFInputStream input;
 
     /**
-     * The bytes sent to the remote side.
+     * The bytes sent to the remote side.  Note package private access.
      */
-    private OutputStream output;
+    OutputStream output;
 
     /**
      * If true, permit downloads to overwrite files.

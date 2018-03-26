@@ -40,7 +40,7 @@ import jermit.tests.TestFailedException;
 /**
  * Test a Zmodem batch upload file transfer.
  */
-public class Zmodem4 extends SerialTransferTest implements Runnable {
+public class Zmodem5 extends SerialTransferTest implements Runnable {
 
     class FilePair {
         public String name;
@@ -53,7 +53,7 @@ public class Zmodem4 extends SerialTransferTest implements Runnable {
     /**
      * Public constructor.
      */
-    public Zmodem4() {
+    public Zmodem5() {
     }
 
     /**
@@ -61,7 +61,7 @@ public class Zmodem4 extends SerialTransferTest implements Runnable {
      */
     @Override
     public void doTest() throws IOException, TestFailedException {
-        System.out.printf("Zmodem4: 4 binary file uploads\n");
+        System.out.printf("Zmodem5: 4 binary file uploads, escaped ctrl\n");
 
         // Process:
         //
@@ -81,9 +81,9 @@ public class Zmodem4 extends SerialTransferTest implements Runnable {
             pairs[i] = new FilePair();
         }
         pairs[0].name = "lady-of-shalott.jpg";
-        pairs[1].name = "qm5.zip";
+        pairs[3].name = "qm5.zip";
         pairs[2].name = "William-Adolphe_Bouguereau_(1825-1905)_-_A_Young_Girl_Defending_Herself_Against_Eros_(1880).jpg";
-        pairs[3].name = "rfc856.txt";
+        pairs[1].name = "rfc856.txt";
 
         List<String> files = new LinkedList<String>();
 
@@ -112,8 +112,7 @@ public class Zmodem4 extends SerialTransferTest implements Runnable {
             pairs[i].tmpDestPath = destination.getPath();
         }
 
-        // ProcessBuilder zmodemPB = new ProcessBuilder("rz", "-U");
-        ProcessBuilder zmodemPB = new ProcessBuilder("rz");
+        ProcessBuilder zmodemPB = new ProcessBuilder("rz", "-e");
         // Change zmodem's working dir to be the temp dir
         zmodemPB.directory(destinationDir);
         Process zmodemReceiver = zmodemPB.start();
@@ -133,16 +132,6 @@ public class Zmodem4 extends SerialTransferTest implements Runnable {
                 // SQUASH
             }
         }
-
-        /*
-        try {
-            System.out.println("SLEEP...");
-            Thread.currentThread().sleep(120 * 1000);
-        } catch (InterruptedException e) {
-            // SQUASH
-        }
-        */
-
 
         for (int i = 0; i < pairs.length; i++) {
             if (!compareFiles(pairs[i].tmpSourcePath, pairs[i].tmpDestPath)) {
@@ -171,7 +160,7 @@ public class Zmodem4 extends SerialTransferTest implements Runnable {
      */
     public static void main(final String [] args) {
         try {
-            Zmodem4 test = new Zmodem4();
+            Zmodem5 test = new Zmodem5();
             test.doTest();
         } catch (Throwable t) {
             t.printStackTrace();

@@ -90,9 +90,13 @@ class ZData extends Header {
         if (rc == -1) {
             eof = true;
         } else if (rc < fileData.length) {
+            assert (rc < blockSize);
             byte [] oldFileData = fileData;
             fileData = new byte[rc];
-            System.arraycopy(oldFileData, 0, fileData, 0, fileData.length);
+            System.arraycopy(oldFileData, 0, fileData, 0, rc);
+            eof = true;
+        } else {
+            assert (rc == fileData.length);
         }
     }
 
@@ -109,6 +113,17 @@ class ZData extends Header {
     @Override
     protected void parseDataSubpacket(final byte [] subpacket) {
         fileData = subpacket;
+    }
+
+    /**
+     * Get the data subpacket raw bytes.  Used by subclasses to serialize
+     * fields into data.
+     *
+     * @return the bytes of the subpacket
+     */
+    @Override
+    protected byte [] createDataSubpacket() {
+        return fileData;
     }
 
     // ------------------------------------------------------------------------

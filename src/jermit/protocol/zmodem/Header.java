@@ -96,7 +96,7 @@ class Header {
     static final byte ZCRCQ = 'j';
 
     /**
-     * CRC next, ZACK expected, end of frame.  Note package private access.
+     * CRC next, frame ends, ZACK expected.  Note package private access.
      */
     static final byte ZCRCW = 'k';
 
@@ -550,12 +550,13 @@ class Header {
     }
 
     /**
-     * Convert a 32-bit int from big endian to little endian.
+     * Convert a 32-bit int from big endian to little endian.  Note package
+     * private access.
      *
      * @param x the integer to convert
      * @return the integer in reverse-byte order
      */
-    private static int bigToLittleEndian(final int x) {
+    static int bigToLittleEndian(final int x) {
         return (((x >>> 24) & 0xFF) |
                 ((x >>>  8) & 0xFF00) |
                 ((x <<   8) & 0xFF0000) |
@@ -635,6 +636,7 @@ class Header {
         case ZCOMPL:
         case ZFREECNT:
         case ZSINIT:
+        case ZDATA:
             /*
              * Little endian order only for these types.
              */
@@ -1175,6 +1177,7 @@ class Header {
         case ZCRC:
         case ZCOMPL:
         case ZFREECNT:
+        case ZDATA:
             /*
              * Swap the data argument around
              */
@@ -1563,96 +1566,56 @@ class Header {
         }
 
         byte [] rawData = createDataSubpacket();
+        byte [] rawDataCrc = new byte[rawData.length + 1];
+        System.arraycopy(rawData, 0, rawDataCrc, 0, rawData.length);
+        rawDataCrc[rawData.length] = session.crcType;
 
-        int crc16;
-        int crc32;
-        boolean doingCrc = false;
+        /*
+         * Compute the CRC
+         */
         ByteArrayOutputStream crcBuffer = new ByteArrayOutputStream();
-        ByteArrayOutputStream result = new ByteArrayOutputStream();
-        byte [] crcBytes = null;
-        int crcLength = 2;
+        if ((useCrc32 == true) /* && (type != Type.ZSINIT) */ ) {
+            int crc32 = Crc.computeCrc32(0, null, 0);
+            crc32 = Crc.computeCrc32(crc32, rawDataCrc, rawDataCrc.length);
 
-        for (int i = 0; ; i++) {
-            byte ch;
-
-            if (doingCrc == false) {
-                if (i == rawData.length) {
-                    /*
-                     * Add the link escape sequence
-                     */
-                    output.write(C_CAN);
-                    output.write(session.crcType);
-
-                    /*
-                     * Compute the CRC
-                     */
-                    if ((useCrc32 == true) /* && (type != Type.ZSINIT) */ ) {
-
-                        crcLength = 4;
-                        crc32 = Crc.computeCrc32(0, null, 0);
-
-                        /*
-                         * Another case of *strange* CRC behavior...
-                         */
-                        for (int j = 0; j < rawData.length; j++) {
-                            crc32 = ~Crc.computeCrc32(crc32, rawData[j]);
-                        }
-                        crc32 = ~Crc.computeCrc32(crc32, session.crcType);
-                        crc32 = ~crc32;
-
-                        if (DEBUG) {
-                            System.err.printf("writeDataSubpacket(): " +
-                                "DATA CRC32: %08x\n", crc32);
-                        }
-
-                        /*
-                         * Little-endian
-                         */
-                        crcBuffer.write( crc32         & 0xFF);
-                        crcBuffer.write((crc32 >>>  8) & 0xFF);
-                        crcBuffer.write((crc32 >>> 16) & 0xFF);
-                        crcBuffer.write((crc32 >>> 24) & 0xFF);
-
-                    } else {
-                        /*
-                         * 16-bit CRC
-                         */
-                        crcLength = 2;
-                        crc16 = Crc.computeCrc16(0, rawData, rawData.length);
-                        crc16 = Crc.computeCrc16(crc16, session.crcType);
-
-                        if (DEBUG) {
-                            System.err.printf("writeDataSubpacket(): " +
-                                "DATA CRC16: %04x\n", crc16);
-                        }
-
-                        /*
-                         * Big-endian
-                         */
-                        crcBuffer.write((crc16 >>> 8) & 0xFF);
-                        crcBuffer.write( crc16        & 0xFF);
-                    }
-
-                    doingCrc = true;
-                    i = -1;
-                    crcBytes = crcBuffer.toByteArray();
-                    continue;
-                } else {
-                    ch = rawData[i];
-                }
-            } else {
-                if (i >= crcLength) {
-                    break;
-                }
-                ch = crcBytes[i];
+            if (DEBUG) {
+                System.err.printf("writeDataSubpacket(): " +
+                    "DATA CRC32: %08x\n", crc32);
             }
 
             /*
-             * Encode the byte
+             * Little-endian
              */
-            output.write(encodeByte(ch, session));
+            crcBuffer.write( crc32         & 0xFF);
+            crcBuffer.write((crc32 >>>  8) & 0xFF);
+            crcBuffer.write((crc32 >>> 16) & 0xFF);
+            crcBuffer.write((crc32 >>> 24) & 0xFF);
 
-        } /* for (i = 0; i < rawData.length; i++) */
+        } else {
+            int crc16 = Crc.computeCrc16(0, rawDataCrc, rawDataCrc.length);
+
+            if (DEBUG) {
+                System.err.printf("writeDataSubpacket(): " +
+                    "DATA CRC16: %04x\n", crc16);
+            }
+
+            /*
+             * Big-endian
+             */
+            crcBuffer.write((crc16 >>> 8) & 0xFF);
+            crcBuffer.write( crc16        & 0xFF);
+        }
+        byte [] crcBytes = crcBuffer.toByteArray();
+        for (int i = 0; i < rawData.length; i++) {
+            byte [] ch = encodeByte(rawData[i], session);
+            output.write(ch);
+        }
+        output.write(C_CAN);
+        output.write(session.crcType);
+        for (int i = 0; i < crcBytes.length; i++) {
+            byte [] ch = encodeByte(crcBytes[i], session);
+            output.write(ch);
+        }
 
         /*
          * One type of packet is terminated "special"
@@ -1660,7 +1623,6 @@ class Header {
         if (session.crcType == ZCRCW) {
             output.write(C_XON);
         }
-
     }
 
 }

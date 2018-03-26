@@ -47,7 +47,7 @@ public class TestAll {
         try {
             System.out.println("--- Executing all Jermit tests... ---");
 
-            if (false) {
+            if (true) {
 
             /*
              * XMODEM ---------------------------------------------------------
@@ -95,7 +95,7 @@ public class TestAll {
              * KERMIT ---------------------------------------------------------
              */
 
-            if (false) {
+            if (true) {
 
             /*
              * Basic uploads and downloads - clean line.
@@ -127,7 +127,7 @@ public class TestAll {
              * ZMODEM ---------------------------------------------------------
              */
 
-            if (false) {
+            if (true) {
 
             /*
              * Basic uploads and downloads - clean line.
@@ -135,11 +135,12 @@ public class TestAll {
             (new Zmodem1()).doTest();
             (new Zmodem2()).doTest();
             (new Zmodem3()).doTest();
-            }
-
-            if (true) {
             (new Zmodem4()).doTest();
             (new Zmodem5()).doTest();
+
+            }
+
+            if (false) {
 
             /*
              * Escaped control character tests.  Turn it off afterwards.

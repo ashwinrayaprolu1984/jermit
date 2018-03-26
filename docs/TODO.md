@@ -6,7 +6,6 @@ Jermit TODO List
   BUG: increment consecutive error counts for Kermit and Zmodem
 
   Zmodem:
-    ZmodemSender
     ZFile --> ZFileHeader etc.
 
 0.1.1:
@@ -19,6 +18,9 @@ Jermit TODO List
 
   Fix up corner cases:
     Zmodem:
+      True crash recovery (ZCRC + ZSKIP)
+      ZSKIP during transfer
+      Use ZCRCG/ZCRCQ (don't repeat the frame header when streaming)
       Up/down block size on noisy transfers
       Max window size
       ASCII transfer

@@ -29,9 +29,9 @@
 package jermit.protocol.zmodem;
 
 /**
- * ZRQInit is sent by the sender to kick off the receiver.
+ * ZAckHeader is used to acknowledge several different headers.
  */
-class ZRQInit extends Header {
+class ZAckHeader extends Header {
 
     // ------------------------------------------------------------------------
     // Constructors -----------------------------------------------------------
@@ -39,22 +39,35 @@ class ZRQInit extends Header {
 
     /**
      * Public constructor.
-     *
-     * @param data the data field for this header
      */
-    public ZRQInit(final int data) {
-        super(Type.ZRQINIT, (byte) 0x00, "ZRQINIT", data);
+    public ZAckHeader() {
+        this(0);
     }
 
     /**
      * Public constructor.
+     *
+     * @param data the data field for this header
      */
-    public ZRQInit() {
-        this(0);
+    public ZAckHeader(final int data) {
+        super(Type.ZACK, (byte) 0x03, "ZACK", data);
     }
 
     // ------------------------------------------------------------------------
     // Header -----------------------------------------------------------------
     // ------------------------------------------------------------------------
+
+    // ------------------------------------------------------------------------
+    // ZAckHeader -------------------------------------------------------------
+    // ------------------------------------------------------------------------
+
+    /**
+     * Get the data field in this ack.
+     *
+     * @return the data field
+     */
+    public int getData() {
+        return data;
+    }
 
 }

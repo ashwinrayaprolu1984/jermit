@@ -871,11 +871,11 @@ class Header {
             ch = readCheckCtrlX(input);
         }
         if (ch != C_CAN) {
-            return new ZNak(ParseState.PROTO_ZCAN);
+            return new ZNakHeader(ParseState.PROTO_ZCAN);
         }
         ch = readCheckCtrlX(input);
         if ((ch != 'A') && (ch != 'B') && (ch != 'C')) {
-            return new ZNak(ParseState.PROTO_ENCODING_TYPE);
+            return new ZNakHeader(ParseState.PROTO_ENCODING_TYPE);
         }
 
         boolean gotCan = false;
@@ -927,7 +927,7 @@ class Header {
                         /*
                          * Should never get here
                          */
-                        return new ZNak(ParseState.PROTO_ENCODING);
+                        return new ZNakHeader(ParseState.PROTO_ENCODING);
                     }
                 }
 
@@ -979,7 +979,7 @@ class Header {
                 givenCrc16 = ((crcGiven[0] & 0xFF) << 8) |
                              ( crcGiven[1] & 0xFF);
             } catch (NumberFormatException e) {
-                return new ZNak(ParseState.PROTO_ENCODING);
+                return new ZNakHeader(ParseState.PROTO_ENCODING);
             }
 
             /*
@@ -1059,7 +1059,7 @@ class Header {
                         /*
                          * Should never get here
                          */
-                        return new ZNak(ParseState.PROTO_ENCODING);
+                        return new ZNakHeader(ParseState.PROTO_ENCODING);
                     }
                 }
 
@@ -1099,40 +1099,40 @@ class Header {
         Header header = null;
         switch (typeWireByte) {
         case 0x00:
-            header = new ZRQInit(dataField);
+            header = new ZRQInitHeader(dataField);
             break;
         case 0x01:
-            header = new ZRInit(dataField);
+            header = new ZRInitHeader(dataField);
             break;
         case 0x02:
-            header = new ZSInit(dataField);
+            header = new ZSInitHeader(dataField);
             break;
         case 0x03:
-            header = new ZAck(dataField);
+            header = new ZAckHeader(dataField);
             break;
         case 0x04:
-            header = new ZFile(dataField);
+            header = new ZFileHeader(dataField);
             break;
         case 0x05:
-            header = new ZSkip(dataField);
+            header = new ZSkipHeader(dataField);
             break;
         case 0x06:
-            header = new ZNak(dataField);
+            header = new ZNakHeader(dataField);
             break;
         case 0x07:
-            header = new ZAbort(dataField);
+            header = new ZAbortHeader(dataField);
             break;
         case 0x08:
-            header = new ZFin(dataField);
+            header = new ZFinHeader(dataField);
             break;
         case 0x09:
-            header = new ZRPos(dataField);
+            header = new ZRPosHeader(dataField);
             break;
         case 0x0A:
-            header = new ZData(dataField);
+            header = new ZDataHeader(dataField);
             break;
         case 0x0B:
-            header = new ZEof(dataField);
+            header = new ZEofHeader(dataField);
             break;
         /*
         case 0x0C:
@@ -1143,7 +1143,7 @@ class Header {
             break;
         */
         case 0x0E:
-            header = new ZChallenge(dataField);
+            header = new ZChallengeHeader(dataField);
             break;
         /*
         case 0x0F:
@@ -1164,7 +1164,7 @@ class Header {
                 System.err.printf("\ndecode(): INVALID HEADER TYPE %d\n",
                     typeWireByte);
             }
-            return new ZNak(ParseState.PROTO_HEADER_TYPE);
+            return new ZNakHeader(ParseState.PROTO_HEADER_TYPE);
         }
 
         /*
@@ -1514,7 +1514,7 @@ class Header {
             if (needAck) {
                 switch (session.zmodemState) {
                 case ZRPOS_WAIT:
-                    session.sendHeader(new ZAck(
+                    session.sendHeader(new ZAckHeader(
                         bigToLittleEndian((int) currentOffset)));
                     break;
                 default:

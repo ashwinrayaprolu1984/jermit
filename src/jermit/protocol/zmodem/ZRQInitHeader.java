@@ -29,9 +29,9 @@
 package jermit.protocol.zmodem;
 
 /**
- * ZEof represents the end of a file.
+ * ZRQInitHeader is sent by the sender to kick off the receiver.
  */
-class ZEof extends Header {
+class ZRQInitHeader extends Header {
 
     // ------------------------------------------------------------------------
     // Constructors -----------------------------------------------------------
@@ -39,35 +39,22 @@ class ZEof extends Header {
 
     /**
      * Public constructor.
+     *
+     * @param data the data field for this header
      */
-    public ZEof() {
-        this(0);
+    public ZRQInitHeader(final int data) {
+        super(Type.ZRQINIT, (byte) 0x00, "ZRQINIT", data);
     }
 
     /**
      * Public constructor.
-     *
-     * @param data the data field for this header
      */
-    public ZEof(final int data) {
-        super(Type.ZEOF, (byte) 0x0B, "ZEOF", data);
+    public ZRQInitHeader() {
+        this(0);
     }
 
     // ------------------------------------------------------------------------
     // Header -----------------------------------------------------------------
     // ------------------------------------------------------------------------
-
-    // ------------------------------------------------------------------------
-    // ZEof -------------------------------------------------------------------
-    // ------------------------------------------------------------------------
-
-    /**
-     * Get the file size value.
-     *
-     * @return the value
-     */
-    public int getFileSize() {
-        return data;
-    }
 
 }

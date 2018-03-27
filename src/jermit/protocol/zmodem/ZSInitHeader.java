@@ -29,9 +29,9 @@
 package jermit.protocol.zmodem;
 
 /**
- * ZSkip is sent by a receiver to skip a file download.
+ * ZSInitHeader is sent by the sender with specified expectations.
  */
-class ZSkip extends Header {
+class ZSInitHeader extends Header {
 
     // ------------------------------------------------------------------------
     // Constructors -----------------------------------------------------------
@@ -39,9 +39,18 @@ class ZSkip extends Header {
 
     /**
      * Public constructor.
+     *
+     * @param session the ZmodemSession
      */
-    public ZSkip() {
-        this(0);
+    public ZSInitHeader(final ZmodemSession session) {
+        super(Type.ZSINIT, (byte) 0x02, "ZSINIT", 0);
+
+        if (session.escapeControlChars) {
+            data |= ZRInitHeader.TX_ESCAPE_CTRL;
+        }
+        if (session.escape8BitChars) {
+            data |= ZRInitHeader.TX_ESCAPE_8BIT;
+        }
     }
 
     /**
@@ -49,12 +58,38 @@ class ZSkip extends Header {
      *
      * @param data the data field for this header
      */
-    public ZSkip(final int data) {
-        super(Type.ZSKIP, (byte) 0x05, "ZSKIP", data);
+    public ZSInitHeader(final int data) {
+        super(Type.ZSINIT, (byte) 0x02, "ZSINIT", data);
     }
 
     // ------------------------------------------------------------------------
     // Header -----------------------------------------------------------------
     // ------------------------------------------------------------------------
+
+    /**
+     * Get the data subpacket raw bytes.  Used by subclasses to serialize
+     * fields into data.
+     *
+     * @return the bytes of the subpacket
+     */
+    @Override
+    protected byte [] createDataSubpacket() {
+        // ZSInit could use this for an "attention string".  For now, we will
+        // not support the attention string.
+        return new byte[0];
+    }
+
+    // ------------------------------------------------------------------------
+    // ZSInitHeader -----------------------------------------------------------
+    // ------------------------------------------------------------------------
+
+    /**
+     * Get the flags from the remote side.
+     *
+     * @return the flags
+     */
+    public int getFlags() {
+        return data;
+    }
 
 }

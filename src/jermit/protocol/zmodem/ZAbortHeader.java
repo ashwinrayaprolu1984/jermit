@@ -29,9 +29,9 @@
 package jermit.protocol.zmodem;
 
 /**
- * ZAck is used to acknowledge several different headers.
+ * ZAbortHeader is used to terminate a transfer by the user.
  */
-class ZAck extends Header {
+class ZAbortHeader extends Header {
 
     // ------------------------------------------------------------------------
     // Constructors -----------------------------------------------------------
@@ -39,35 +39,22 @@ class ZAck extends Header {
 
     /**
      * Public constructor.
+     *
+     * @param data the data field for this header
      */
-    public ZAck() {
-        this(0);
+    public ZAbortHeader(final int data) {
+        super(Type.ZABORT, (byte) 0x07, "ZABORT", data);
     }
 
     /**
      * Public constructor.
-     *
-     * @param data the data field for this header
      */
-    public ZAck(final int data) {
-        super(Type.ZACK, (byte) 0x03, "ZACK", data);
+    public ZAbortHeader() {
+        this(0);
     }
 
     // ------------------------------------------------------------------------
     // Header -----------------------------------------------------------------
     // ------------------------------------------------------------------------
-
-    // ------------------------------------------------------------------------
-    // ZAck -------------------------------------------------------------------
-    // ------------------------------------------------------------------------
-
-    /**
-     * Get the data field in this ack.
-     *
-     * @return the data field
-     */
-    public int getData() {
-        return data;
-    }
 
 }

@@ -29,9 +29,9 @@
 package jermit.protocol.zmodem;
 
 /**
- * ZFin represents the end of a transfer session.
+ * ZFinHeader represents the end of a transfer session.
  */
-class ZFin extends Header {
+class ZFinHeader extends Header {
 
     // ------------------------------------------------------------------------
     // Constructors -----------------------------------------------------------
@@ -40,7 +40,7 @@ class ZFin extends Header {
     /**
      * Public constructor.
      */
-    public ZFin() {
+    public ZFinHeader() {
         this(0);
     }
 
@@ -49,7 +49,7 @@ class ZFin extends Header {
      *
      * @param data the data field for this header
      */
-    public ZFin(final int data) {
+    public ZFinHeader(final int data) {
         super(Type.ZFIN, (byte) 0x08, "ZFIN", data);
     }
 

@@ -264,7 +264,7 @@ public class ZmodemReceiver implements Runnable {
         if (DEBUG) {
             System.err.println("receiveChallenge() sending ZCHALLENGE...");
         }
-        ZChallenge zChallenge = new ZChallenge();
+        ZChallengeHeader zChallenge = new ZChallengeHeader();
         zChallengeValue = zChallenge.getChallengeValue();
         session.sendHeader(zChallenge);
         session.zmodemState = ZmodemState.ZCHALLENGE_WAIT;
@@ -290,14 +290,14 @@ public class ZmodemReceiver implements Runnable {
         if (header.parseState != Header.ParseState.OK) {
             // We had an error.  NAK it.
             session.sendZNak();
-        } else if (header instanceof ZRQInit) {
+        } else if (header instanceof ZRQInitHeader) {
             // Sender sent its first ZRQINIT, ignore it and wait for its
             // actual ZCHALLENGE response.
-        } else if (header instanceof ZAck) {
+        } else if (header instanceof ZAckHeader) {
             // We got the remote side's ZAck
             session.setCurrentStatus("ZACK");
 
-            ZAck ack = (ZAck) header;
+            ZAckHeader ack = (ZAckHeader) header;
             if (ack.getData() == zChallengeValue) {
                 // All OK, move to the next state
                 session.setCurrentStatus("ZCHALLENGE -- OK");
@@ -307,7 +307,7 @@ public class ZmodemReceiver implements Runnable {
                 session.abort("ZCHALLENGE FAILED");
                 session.cancelFlag = 1;
             }
-        } else if (header instanceof ZAbort) {
+        } else if (header instanceof ZAbortHeader) {
             // Remote side signalled error
             session.abort("ZABORT");
             session.cancelFlag = 1;
@@ -330,7 +330,7 @@ public class ZmodemReceiver implements Runnable {
             System.err.println("receiveBegin() sending ZRINIT...");
         }
         session.setupEncodeByteMap();
-        ZRInit zrInit = new ZRInit(session);
+        ZRInitHeader zrInit = new ZRInitHeader(session);
         session.sendHeader(zrInit);
         session.zmodemState = ZmodemState.ZRINIT_WAIT;
         session.setCurrentStatus("SENDING ZRINIT");
@@ -354,24 +354,24 @@ public class ZmodemReceiver implements Runnable {
         if (header.parseState != Header.ParseState.OK) {
             // We had an error.  NAK it.
             session.sendZNak();
-        } else if (header instanceof ZRQInit) {
+        } else if (header instanceof ZRQInitHeader) {
             // Sender has repeated its ZRQINIT, re-send the ZRINIT response.
-            ZRInit zrInit = new ZRInit(session);
+            ZRInitHeader zrInit = new ZRInitHeader(session);
             session.sendHeader(zrInit);
             session.zmodemState = ZmodemState.ZRINIT_WAIT;
             session.setCurrentStatus("SENDING ZRINIT");
-        } else if (header instanceof ZSInit) {
+        } else if (header instanceof ZSInitHeader) {
             // We got the remote side's ZSInit
             session.setCurrentStatus("ZSINIT");
 
-            ZSInit zsInit = (ZSInit) header;
-            if ((zsInit.getFlags() & ZRInit.TX_ESCAPE_CTRL) != 0) {
+            ZSInitHeader zsInit = (ZSInitHeader) header;
+            if ((zsInit.getFlags() & ZRInitHeader.TX_ESCAPE_CTRL) != 0) {
                 session.escapeControlChars = true;
                 if (DEBUG) {
                     System.err.println("receiveBeginWait() TX_ESCAPE_CTRL");
                 }
             }
-            if ((zsInit.getFlags() & ZRInit.TX_ESCAPE_8BIT) != 0) {
+            if ((zsInit.getFlags() & ZRInitHeader.TX_ESCAPE_8BIT) != 0) {
                 session.escape8BitChars = true;
                 if (DEBUG) {
                     System.err.println("receiveBeginWait() TX_ESCAPE_8BIT");
@@ -382,11 +382,11 @@ public class ZmodemReceiver implements Runnable {
             session.setupEncodeByteMap();
 
             // ZACK the ZSINIT
-            session.sendHeader(new ZAck());
+            session.sendHeader(new ZAckHeader());
 
             // Now wait on the ZFILE header, do nothing here.
-        } else if (header instanceof ZFile) {
-            ZFile fileHeader = (ZFile) header;
+        } else if (header instanceof ZFileHeader) {
+            ZFileHeader fileHeader = (ZFileHeader) header;
             if (session.openDownloadFile(fileHeader.filename,
                     fileHeader.fileModTime, fileHeader.fileSize)
             ) {
@@ -401,9 +401,9 @@ public class ZmodemReceiver implements Runnable {
 
             // Move to the next state
             session.zmodemState = ZmodemState.ZRPOS;
-        } else if (header instanceof ZFin) {
+        } else if (header instanceof ZFinHeader) {
             // Send the completion ZFIN
-            session.sendHeader(new ZFin());
+            session.sendHeader(new ZFinHeader());
 
             // Transfer has ended
             synchronized (session) {
@@ -411,7 +411,7 @@ public class ZmodemReceiver implements Runnable {
                 session.setState(SerialFileTransferSession.State.FILE_DONE);
             }
             session.zmodemState = ZmodemState.COMPLETE;
-        } else if (header instanceof ZAbort) {
+        } else if (header instanceof ZAbortHeader) {
             // Remote side signalled error
             session.abort("ZABORT");
             session.cancelFlag = 1;
@@ -432,7 +432,7 @@ public class ZmodemReceiver implements Runnable {
         if (DEBUG) {
             System.err.println("receivePosition() sending ZRPOS...");
         }
-        ZRPos zrPos = new ZRPos((int) file.getBytesTransferred());
+        ZRPosHeader zrPos = new ZRPosHeader((int) file.getBytesTransferred());
         session.sendHeader(zrPos);
         session.zmodemState = ZmodemState.ZRPOS_WAIT;
         session.setCurrentStatus("SENDING ZRPOS");
@@ -455,16 +455,16 @@ public class ZmodemReceiver implements Runnable {
         Header header = session.getHeader(file.getBytesTransferred());
         if (header.parseState != Header.ParseState.OK) {
             // We had an error.  Resend the ZRPOS.
-            ZRPos zrPos = new ZRPos((int) file.getBytesTransferred());
+            ZRPosHeader zrPos = new ZRPosHeader((int) file.getBytesTransferred());
             session.sendHeader(zrPos);
-        } else if (header instanceof ZFile) {
+        } else if (header instanceof ZFileHeader) {
             // Bug in 'sz -e': it can send the ZFILE twice.  Ignore this one.
-        } else if (header instanceof ZData) {
+        } else if (header instanceof ZDataHeader) {
             // Got data, save it.
-            ZData zData = (ZData) header;
-            receiveSaveData((ZData) header);
-        } else if (header instanceof ZEof) {
-            ZEof zEof = (ZEof) header;
+            ZDataHeader zData = (ZDataHeader) header;
+            receiveSaveData((ZDataHeader) header);
+        } else if (header instanceof ZEofHeader) {
+            ZEofHeader zEof = (ZEofHeader) header;
             if (zEof.getFileSize() == file.getBytesTransferred()) {
                 // Save the file and setup for the next file.
                 synchronized (session) {
@@ -519,10 +519,10 @@ public class ZmodemReceiver implements Runnable {
                 //   file got smaller somehow in transit.  If EOF > bytes,
                 //   then the file is growing on disk.  Either of these is
                 //   not ideal, but what should we do here?
-                ZRPos zrPos = new ZRPos((int) file.getBytesTransferred());
+                ZRPosHeader zrPos = new ZRPosHeader((int) file.getBytesTransferred());
                 session.sendHeader(zrPos);
             }
-        } else if (header instanceof ZAbort) {
+        } else if (header instanceof ZAbortHeader) {
             // Remote side signalled error
             session.abort("ZABORT");
             session.cancelFlag = 1;
@@ -535,11 +535,11 @@ public class ZmodemReceiver implements Runnable {
     }
 
     /**
-     * Save a ZData header to file.
+     * Save a ZDataHeader to file.
      *
      * @throws IOException if a java.io operation throws
      */
-    private void receiveSaveData(final ZData zData) throws IOException {
+    private void receiveSaveData(final ZDataHeader zData) throws IOException {
         if (DEBUG) {
             System.err.print("receiveSaveData() saving to file...");
         }

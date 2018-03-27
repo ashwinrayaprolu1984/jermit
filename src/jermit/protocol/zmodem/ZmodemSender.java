@@ -279,7 +279,7 @@ public class ZmodemSender implements Runnable {
         if (DEBUG) {
             System.err.println("sendBegin() sending ZRQINIT...");
         }
-        ZRQInit zrqInit = new ZRQInit();
+        ZRQInitHeader zrqInit = new ZRQInitHeader();
         session.sendHeader(zrqInit);
         session.zmodemState = ZmodemState.ZRQINIT_WAIT;
         session.setCurrentStatus("SENDING ZRQINIT");
@@ -303,55 +303,55 @@ public class ZmodemSender implements Runnable {
         if (header.parseState != Header.ParseState.OK) {
             // We had an error.  Resend the ZRQINIT.
             session.zmodemState = ZmodemState.ZRQINIT;
-        } else if (header instanceof ZChallenge) {
+        } else if (header instanceof ZChallengeHeader) {
             // TODO: respond to ZCHALLENGE
 
 
-        } else if (header instanceof ZRInit) {
+        } else if (header instanceof ZRInitHeader) {
             // We got the remote side's ZRInit
             session.setCurrentStatus("ZRINIT");
 
-            ZRInit zrInit = (ZRInit) header;
+            ZRInitHeader zrInit = (ZRInitHeader) header;
 
             // See what options were specified
-            if ((zrInit.getFlags() & ZRInit.TX_ESCAPE_CTRL) != 0) {
+            if ((zrInit.getFlags() & ZRInitHeader.TX_ESCAPE_CTRL) != 0) {
                 session.escapeControlChars = true;
                 if (DEBUG) {
                     System.err.println("sendBeginWait() TX_ESCAPE_CTRL");
                 }
             }
-            if ((zrInit.getFlags() & ZRInit.TX_ESCAPE_8BIT) != 0) {
+            if ((zrInit.getFlags() & ZRInitHeader.TX_ESCAPE_8BIT) != 0) {
                 session.escape8BitChars = true;
                 if (DEBUG) {
                     System.err.println("sendBeginWait() TX_ESCAPE_8BIT");
                 }
             }
-            if ((zrInit.getFlags() & ZRInit.TX_CAN_FULL_DUPLEX) != 0) {
+            if ((zrInit.getFlags() & ZRInitHeader.TX_CAN_FULL_DUPLEX) != 0) {
                 if (DEBUG) {
                     System.err.println("sendBeginWait() TX_CAN_FULL_DUPLEX");
                 }
             }
-            if ((zrInit.getFlags() & ZRInit.TX_CAN_OVERLAP_IO) != 0) {
+            if ((zrInit.getFlags() & ZRInitHeader.TX_CAN_OVERLAP_IO) != 0) {
                 if (DEBUG) {
                     System.err.println("sendBeginWait() TX_CAN_OVERLAP_IO");
                 }
             }
-            if ((zrInit.getFlags() & ZRInit.TX_CAN_BREAK) != 0) {
+            if ((zrInit.getFlags() & ZRInitHeader.TX_CAN_BREAK) != 0) {
                 if (DEBUG) {
                     System.err.println("sendBeginWait() TX_CAN_BREAK");
                 }
             }
-            if ((zrInit.getFlags() & ZRInit.TX_CAN_DECRYPT) != 0) {
+            if ((zrInit.getFlags() & ZRInitHeader.TX_CAN_DECRYPT) != 0) {
                 if (DEBUG) {
                     System.err.println("sendBeginWait() TX_CAN_DECRYPT");
                 }
             }
-            if ((zrInit.getFlags() & ZRInit.TX_CAN_LZW) != 0) {
+            if ((zrInit.getFlags() & ZRInitHeader.TX_CAN_LZW) != 0) {
                 if (DEBUG) {
                     System.err.println("sendBeginWait() TX_CAN_LZW");
                 }
             }
-            if ((zrInit.getFlags() & ZRInit.TX_CAN_CRC32) != 0) {
+            if ((zrInit.getFlags() & ZRInitHeader.TX_CAN_CRC32) != 0) {
                 session.useCrc32 = true;
                 if (DEBUG) {
                     System.err.println("sendBeginWait() TX_CAN_CRC32");
@@ -363,7 +363,7 @@ public class ZmodemSender implements Runnable {
 
             // Move to the next state
             session.zmodemState = ZmodemState.ZSINIT;
-        } else if (header instanceof ZAbort) {
+        } else if (header instanceof ZAbortHeader) {
             // Remote side signalled error
             session.abort("ZABORT");
             session.cancelFlag = 1;
@@ -384,7 +384,7 @@ public class ZmodemSender implements Runnable {
         if (DEBUG) {
             System.err.println("sendInit() sending ZSINIT...");
         }
-        ZSInit zsInit = new ZSInit(session);
+        ZSInitHeader zsInit = new ZSInitHeader(session);
         session.sendHeader(zsInit);
         session.zmodemState = ZmodemState.ZSINIT_WAIT;
         session.setCurrentStatus("SENDING ZSINIT");
@@ -407,15 +407,15 @@ public class ZmodemSender implements Runnable {
         if (header.parseState != Header.ParseState.OK) {
             // We had an error.  Resend the ZSINIT.
             session.zmodemState = ZmodemState.ZSINIT;
-        } else if (header instanceof ZAck) {
+        } else if (header instanceof ZAckHeader) {
             session.setCurrentStatus("ZACK");
 
             // Move to the next state
             session.zmodemState = ZmodemState.ZFILE;
-        } else if (header instanceof ZRInit) {
+        } else if (header instanceof ZRInitHeader) {
             // Receiver has repeated its ZRINIT because we were out of sync
             // with the ZRQINIT.  Ignore it.
-        } else if (header instanceof ZAbort) {
+        } else if (header instanceof ZAbortHeader) {
             // Remote side signalled error
             session.abort("ZABORT");
             session.cancelFlag = 1;
@@ -491,7 +491,8 @@ public class ZmodemSender implements Runnable {
                 filename, file.getLocalFile().getLength());
         }
         String filePart = (new File(filename)).getName();
-        ZFile zFile = new ZFile(filePart, file.getSize(), file.getModTime());
+        ZFileHeader zFile = new ZFileHeader(filePart, file.getSize(),
+            file.getModTime());
         filePosition = 0;
         session.sendHeader(zFile);
         session.setCurrentStatus("SENDING FILE");
@@ -517,10 +518,10 @@ public class ZmodemSender implements Runnable {
         if (header.parseState != Header.ParseState.OK) {
             // We had an error.  Resend the ZFILE.
             session.zmodemState = ZmodemState.ZFILE;
-        } else if (header instanceof ZRPos) {
+        } else if (header instanceof ZRPosHeader) {
             session.setCurrentStatus("ZRPOS");
 
-            ZRPos zrPos = (ZRPos) header;
+            ZRPosHeader zrPos = (ZRPosHeader) header;
             long remotePosition = zrPos.getPosition();
             if ((needEofAck == true)
                 && (remotePosition == file.getLocalFile().getLength())
@@ -543,8 +544,8 @@ public class ZmodemSender implements Runnable {
             while (sendData() && (session.input.available() == 0)) {
                 // Keep sending data until EOF or ack required.
             }
-        } else if (header instanceof ZAck) {
-            ZAck zAck = (ZAck) header;
+        } else if (header instanceof ZAckHeader) {
+            ZAckHeader zAck = (ZAckHeader) header;
             long remotePosition = Header.bigToLittleEndian(zAck.getData());
             if ((needEofAck == true)
                 && (remotePosition == file.getLocalFile().getLength())
@@ -557,7 +558,7 @@ public class ZmodemSender implements Runnable {
             while (sendData() && (session.input.available() == 0)) {
                 // Keep sending data until EOF or ack required.
             }
-        } else if (header instanceof ZAbort) {
+        } else if (header instanceof ZAbortHeader) {
             // Remote side signalled error
             session.abort("ZABORT");
             session.cancelFlag = 1;
@@ -578,7 +579,7 @@ public class ZmodemSender implements Runnable {
         if (DEBUG) {
             System.err.println("sendInit() sending ZEOF...");
         }
-        ZEof zEof = new ZEof((int) file.getLocalFile().getLength());
+        ZEofHeader zEof = new ZEofHeader((int) file.getLocalFile().getLength());
         session.sendHeader(zEof);
         session.zmodemState = ZmodemState.ZEOF_WAIT;
         session.setCurrentStatus("SENDING ZEOF");
@@ -601,7 +602,7 @@ public class ZmodemSender implements Runnable {
         if (header.parseState != Header.ParseState.OK) {
             // We had an error.  Resend the ZEOF.
             session.zmodemState = ZmodemState.ZEOF;
-        } else if (header instanceof ZRInit) {
+        } else if (header instanceof ZRInitHeader) {
             // We have completed this file.
             synchronized (session) {
                 setFile.setBlocksTransferred(file.getBlocksTotal());
@@ -609,7 +610,7 @@ public class ZmodemSender implements Runnable {
 
             // Move to the next state
             session.zmodemState = ZmodemState.ZFILE;
-        } else if (header instanceof ZAbort) {
+        } else if (header instanceof ZAbortHeader) {
             // Remote side signalled error
             session.abort("ZABORT");
             session.cancelFlag = 1;
@@ -630,7 +631,7 @@ public class ZmodemSender implements Runnable {
         if (DEBUG) {
             System.err.println("sendInit() sending ZFIN...");
         }
-        ZFin zFin = new ZFin();
+        ZFinHeader zFin = new ZFinHeader();
         session.sendHeader(zFin);
         session.zmodemState = ZmodemState.ZFIN_WAIT;
         session.setCurrentStatus("SENDING ZFIN");
@@ -653,7 +654,7 @@ public class ZmodemSender implements Runnable {
         if (header.parseState != Header.ParseState.OK) {
             // We had an error.  Resend the ZFIN.
             session.zmodemState = ZmodemState.ZFIN;
-        } else if (header instanceof ZFin) {
+        } else if (header instanceof ZFinHeader) {
             // Write the "over-and-out" and call it done.
             session.output.write('O');
             session.output.write('O');
@@ -664,7 +665,7 @@ public class ZmodemSender implements Runnable {
             }
             session.zmodemState = ZmodemState.COMPLETE;
             session.setCurrentStatus("COMPLETE");
-        } else if (header instanceof ZAbort) {
+        } else if (header instanceof ZAbortHeader) {
             // Remote side signalled error
             session.abort("ZABORT");
             session.cancelFlag = 1;
@@ -697,7 +698,8 @@ public class ZmodemSender implements Runnable {
         // Read another subpacket's worth from the file and send it out.
         // session.sendHeader() will call header.encode() which performs the
         // actual reading.
-        ZData dataHeader = new ZData(fileInput, filePosition, blockSize);
+        ZDataHeader dataHeader = new ZDataHeader(fileInput, filePosition,
+            blockSize);
         if (dataHeader.eof) {
             session.crcType = Header.ZCRCW;
         }

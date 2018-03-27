@@ -32,9 +32,9 @@ import java.io.File;
 import java.io.UnsupportedEncodingException;
 
 /**
- * ZFile is used to acknowledge several different headers.
+ * ZFileHeader is used to pass a filename and metadata.
  */
-class ZFile extends Header {
+class ZFileHeader extends Header {
 
     // ------------------------------------------------------------------------
     // Variables --------------------------------------------------------------
@@ -62,7 +62,7 @@ class ZFile extends Header {
     /**
      * Public constructor.
      */
-    public ZFile() {
+    public ZFileHeader() {
         this(0);
     }
 
@@ -71,7 +71,7 @@ class ZFile extends Header {
      *
      * @param data the data field for this header
      */
-    public ZFile(final int data) {
+    public ZFileHeader(final int data) {
         super(Type.ZFILE, (byte) 0x04, "ZFILE", data);
     }
 
@@ -82,7 +82,7 @@ class ZFile extends Header {
      * @param fileSize size of file
      * @param fileModTime modification time of file
      */
-    public ZFile(final String filename, final long fileSize,
+    public ZFileHeader(final String filename, final long fileSize,
         final long fileModTime) {
 
         this(0);

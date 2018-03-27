@@ -8,9 +8,10 @@ protocols.  General summary:
     relaxed, CRC-16, 1K, 1K/G, and G.
 
   * Kermit is supported in both vanilla and streaming modes.  (Full
-    duplex sliding windows are estimated to be in around 1Q 2018.)
+    duplex sliding windows are estimated to be in around 3Q 2018.)
 
-  * Zmodem is estimated to be in around 3Q 2018.
+  * Zmodem is in, but still very rough.  Use it only on clean lines
+    (TCP, error-corrected serial) for now.
 
   * Uploads and downloads occur between System.in/out and a local
     file.
@@ -18,7 +19,7 @@ protocols.  General summary:
   * Two interfaces are provided so far:
 
     1. Command-line utilities that can be drop-in replacements for
-       rx/sx/rb/sb.
+       rx/sx/rz/rb/sb/sz.
 
     2. A new 'jermit' command that transfers across System.in/out with
        a Swing-based transfer file dialog window that resembles Qodem.
@@ -86,7 +87,7 @@ invoke Jermit code in one of these general ways:
     utilities.  A replacement for ckermit with readline-like support
     is also in plan.
 
-  * It is plan to provide a heirarchy of SerialURLConnection's
+  * It is planned to provide a heirarchy of SerialURLConnection's
     (XmodemURLConnection, KermitURLConnection, etc.) that can be
     treated like a HttpURLConnetion.  The connections will support
     both UDP and TCP transports.

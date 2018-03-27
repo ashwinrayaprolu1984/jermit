@@ -29,9 +29,9 @@
 package jermit.protocol.zmodem;
 
 /**
- * ZAbort is used to terminate a transfer by the user.
+ * ZEofHeader represents the end of a file.
  */
-class ZAbort extends Header {
+class ZEofHeader extends Header {
 
     // ------------------------------------------------------------------------
     // Constructors -----------------------------------------------------------
@@ -39,22 +39,35 @@ class ZAbort extends Header {
 
     /**
      * Public constructor.
-     *
-     * @param data the data field for this header
      */
-    public ZAbort(final int data) {
-        super(Type.ZABORT, (byte) 0x07, "ZABORT", data);
+    public ZEofHeader() {
+        this(0);
     }
 
     /**
      * Public constructor.
+     *
+     * @param data the data field for this header
      */
-    public ZAbort() {
-        this(0);
+    public ZEofHeader(final int data) {
+        super(Type.ZEOF, (byte) 0x0B, "ZEOF", data);
     }
 
     // ------------------------------------------------------------------------
     // Header -----------------------------------------------------------------
     // ------------------------------------------------------------------------
+
+    // ------------------------------------------------------------------------
+    // ZEofHeader -------------------------------------------------------------
+    // ------------------------------------------------------------------------
+
+    /**
+     * Get the file size value.
+     *
+     * @return the value
+     */
+    public int getFileSize() {
+        return data;
+    }
 
 }

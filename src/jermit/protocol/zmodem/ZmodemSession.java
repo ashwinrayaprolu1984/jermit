@@ -434,7 +434,7 @@ public class ZmodemSession extends SerialFileTransferSession {
             System.err.println("ABORT: " + message);
         }
         try {
-            sendHeader(new ZAbort());
+            sendHeader(new ZAbortHeader());
         } catch (IOException e) {
             if (DEBUG) {
                 e.printStackTrace();
@@ -539,7 +539,7 @@ public class ZmodemSession extends SerialFileTransferSession {
      * @throws IOException if a java.io operation throws
      */
     protected void sendZNak() throws IOException {
-        Header header = new ZNak();
+        Header header = new ZNakHeader();
         byte [] headerBytes = header.encode(this, 0);
         output.write(headerBytes);
         output.flush();

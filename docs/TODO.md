@@ -1,14 +1,10 @@
 Jermit TODO List
 ================
 
-0.1.0:
-
-  BUG: increment consecutive error counts for Kermit and Zmodem
-
-  Zmodem:
-    ZFile --> ZFileHeader etc.
 
 0.1.1:
+
+  BUG: increment consecutive error counts for Kermit and Zmodem
 
   Refactor:
     - Move all session functions into receiver/sender if they are only

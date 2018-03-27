@@ -28,10 +28,13 @@
  */
 package jermit.protocol.zmodem;
 
+import java.util.Random;
+
 /**
- * ZNak is used to request a header retransmission.
+ * ZChallengeHeader generates a random number to be used in the
+ * ZCHALLENGE/ZACK exchange.
  */
-class ZNak extends Header {
+class ZChallengeHeader extends Header {
 
     // ------------------------------------------------------------------------
     // Constructors -----------------------------------------------------------
@@ -39,19 +42,14 @@ class ZNak extends Header {
 
     /**
      * Public constructor.
-     *
-     * @param parseState reason this NAK was generated
      */
-    public ZNak(final ParseState parseState) {
-        super(Type.ZNAK, (byte) 0x06, "ZNAK", 0);
-        this.parseState = parseState;
-    }
+    public ZChallengeHeader() {
+        this(0);
 
-    /**
-     * Public constructor.
-     */
-    public ZNak() {
-        this(ParseState.OK);
+        // Generate a random int, but it cannot be zero.
+        do {
+            data = (new Random()).nextInt();
+        } while (data == 0);
     }
 
     /**
@@ -59,12 +57,25 @@ class ZNak extends Header {
      *
      * @param data the data field for this header
      */
-    public ZNak(final int data) {
-        super(Type.ZNAK, (byte) 0x06, "ZNAK", data);
+    public ZChallengeHeader(final int data) {
+        super(Type.ZCHALLENGE, (byte) 0x0E, "ZCHALLENGE", data);
     }
 
     // ------------------------------------------------------------------------
     // Header -----------------------------------------------------------------
     // ------------------------------------------------------------------------
+
+    // ------------------------------------------------------------------------
+    // ZChallengeHeader -------------------------------------------------------
+    // ------------------------------------------------------------------------
+
+    /**
+     * Get the generated ZCHALLENGE value.
+     *
+     * @return the value
+     */
+    public int getChallengeValue() {
+        return data;
+    }
 
 }

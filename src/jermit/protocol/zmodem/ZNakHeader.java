@@ -28,13 +28,10 @@
  */
 package jermit.protocol.zmodem;
 
-import java.util.Random;
-
 /**
- * ZChallenge generates a random number to be used in the ZCHALLENGE/ZACK
- * exchange.
+ * ZNakHeader is used to request a header retransmission.
  */
-class ZChallenge extends Header {
+class ZNakHeader extends Header {
 
     // ------------------------------------------------------------------------
     // Constructors -----------------------------------------------------------
@@ -42,14 +39,19 @@ class ZChallenge extends Header {
 
     /**
      * Public constructor.
+     *
+     * @param parseState reason this NAK was generated
      */
-    public ZChallenge() {
-        this(0);
+    public ZNakHeader(final ParseState parseState) {
+        super(Type.ZNAK, (byte) 0x06, "ZNAK", 0);
+        this.parseState = parseState;
+    }
 
-        // Generate a random int, but it cannot be zero.
-        do {
-            data = (new Random()).nextInt();
-        } while (data == 0);
+    /**
+     * Public constructor.
+     */
+    public ZNakHeader() {
+        this(ParseState.OK);
     }
 
     /**
@@ -57,25 +59,12 @@ class ZChallenge extends Header {
      *
      * @param data the data field for this header
      */
-    public ZChallenge(final int data) {
-        super(Type.ZCHALLENGE, (byte) 0x0E, "ZCHALLENGE", data);
+    public ZNakHeader(final int data) {
+        super(Type.ZNAK, (byte) 0x06, "ZNAK", data);
     }
 
     // ------------------------------------------------------------------------
     // Header -----------------------------------------------------------------
     // ------------------------------------------------------------------------
-
-    // ------------------------------------------------------------------------
-    // ZChallenge -------------------------------------------------------------
-    // ------------------------------------------------------------------------
-
-    /**
-     * Get the generated ZCHALLENGE value.
-     *
-     * @return the value
-     */
-    public int getChallengeValue() {
-        return data;
-    }
 
 }

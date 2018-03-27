@@ -29,9 +29,9 @@
 package jermit.protocol.zmodem;
 
 /**
- * ZRInit is sent by the receiver with specified capabilities.
+ * ZRInitHeader is sent by the receiver with specified capabilities.
  */
-class ZRInit extends Header {
+class ZRInitHeader extends Header {
 
     // ------------------------------------------------------------------------
     // Constants --------------------------------------------------------------
@@ -86,7 +86,7 @@ class ZRInit extends Header {
      *
      * @param session the ZmodemSession
      */
-    public ZRInit(final ZmodemSession session) {
+    public ZRInitHeader(final ZmodemSession session) {
         super(Type.ZRINIT, (byte) 0x01, "ZRINIT", 0);
 
         data = TX_CAN_FULL_DUPLEX | TX_CAN_OVERLAP_IO;
@@ -103,14 +103,14 @@ class ZRInit extends Header {
      *
      * @param data the data field for this header
      */
-    public ZRInit(final int data) {
+    public ZRInitHeader(final int data) {
         super(Type.ZRINIT, (byte) 0x01, "ZRINIT", data);
     }
 
     /**
      * Public constructor.
      */
-    public ZRInit() {
+    public ZRInitHeader() {
         this(0);
     }
 

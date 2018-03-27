@@ -28,10 +28,27 @@
  */
 package jermit.protocol.zmodem;
 
+import java.io.InputStream;
+import java.io.IOException;
+
 /**
- * ZSInit is sent by the sender with specified expectations.
+ * ZDataHeader contains a file position and some file data.
  */
-class ZSInit extends Header {
+class ZDataHeader extends Header {
+
+    // ------------------------------------------------------------------------
+    // Variables --------------------------------------------------------------
+    // ------------------------------------------------------------------------
+
+    /**
+     * File data bytes.
+     */
+    private byte [] fileData;
+
+    /**
+     * If true, file is at EOF.  Note package private access.
+     */
+    boolean eof = false;
 
     // ------------------------------------------------------------------------
     // Constructors -----------------------------------------------------------
@@ -39,18 +56,9 @@ class ZSInit extends Header {
 
     /**
      * Public constructor.
-     *
-     * @param session the ZmodemSession
      */
-    public ZSInit(final ZmodemSession session) {
-        super(Type.ZSINIT, (byte) 0x02, "ZSINIT", 0);
-
-        if (session.escapeControlChars) {
-            data |= ZRInit.TX_ESCAPE_CTRL;
-        }
-        if (session.escape8BitChars) {
-            data |= ZRInit.TX_ESCAPE_8BIT;
-        }
+    public ZDataHeader() {
+        this(0);
     }
 
     /**
@@ -58,13 +66,54 @@ class ZSInit extends Header {
      *
      * @param data the data field for this header
      */
-    public ZSInit(final int data) {
-        super(Type.ZSINIT, (byte) 0x02, "ZSINIT", data);
+    public ZDataHeader(final int data) {
+        super(Type.ZDATA, (byte) 0x0A, "ZDATA", data);
+
+        fileData = new byte[0];
+    }
+
+    /**
+     * Public constructor.
+     *
+     * @param input stream to read file data from
+     * @param position the current position of the file
+     * @param blockSize number of bytes to try to read
+     * @throws IOException if a java.io operation throws
+     */
+    public ZDataHeader(final InputStream input, final long position,
+        final int blockSize) throws IOException {
+
+        super(Type.ZDATA, (byte) 0x0A, "ZDATA", (int) position);
+
+        fileData = new byte[blockSize];
+        int rc = input.read(fileData, 0, blockSize);
+        if (rc == -1) {
+            eof = true;
+        } else if (rc < fileData.length) {
+            assert (rc < blockSize);
+            byte [] oldFileData = fileData;
+            fileData = new byte[rc];
+            System.arraycopy(oldFileData, 0, fileData, 0, rc);
+            eof = true;
+        } else {
+            assert (rc == fileData.length);
+        }
     }
 
     // ------------------------------------------------------------------------
     // Header -----------------------------------------------------------------
     // ------------------------------------------------------------------------
+
+    /**
+     * Parse whatever came in a data subpacket.  Used by subclasses to put
+     * data into fields.
+     *
+     * @param subpacket the bytes of the subpacket
+     */
+    @Override
+    protected void parseDataSubpacket(final byte [] subpacket) {
+        fileData = subpacket;
+    }
 
     /**
      * Get the data subpacket raw bytes.  Used by subclasses to serialize
@@ -74,22 +123,20 @@ class ZSInit extends Header {
      */
     @Override
     protected byte [] createDataSubpacket() {
-        // ZSInit could use this for an "attention string".  For now, we will
-        // not support the attention string.
-        return new byte[0];
+        return fileData;
     }
 
     // ------------------------------------------------------------------------
-    // ZSInit -----------------------------------------------------------------
+    // ZDataHeader ------------------------------------------------------------
     // ------------------------------------------------------------------------
 
     /**
-     * Get the flags from the remote side.
+     * Get the file data.
      *
-     * @return the flags
+     * @return the data
      */
-    public int getFlags() {
-        return data;
+    public byte [] getFileData() {
+        return fileData;
     }
 
 }

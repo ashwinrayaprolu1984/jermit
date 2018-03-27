@@ -29,9 +29,9 @@
 package jermit.protocol.zmodem;
 
 /**
- * ZRPos contains a file position.
+ * ZSkipHeader is sent by a receiver to skip a file download.
  */
-class ZRPos extends Header {
+class ZSkipHeader extends Header {
 
     // ------------------------------------------------------------------------
     // Constructors -----------------------------------------------------------
@@ -40,7 +40,7 @@ class ZRPos extends Header {
     /**
      * Public constructor.
      */
-    public ZRPos() {
+    public ZSkipHeader() {
         this(0);
     }
 
@@ -49,28 +49,12 @@ class ZRPos extends Header {
      *
      * @param data the data field for this header
      */
-    public ZRPos(final int data) {
-        super(Type.ZRPOS, (byte) 0x09, "ZRPOS", data);
+    public ZSkipHeader(final int data) {
+        super(Type.ZSKIP, (byte) 0x05, "ZSKIP", data);
     }
 
     // ------------------------------------------------------------------------
     // Header -----------------------------------------------------------------
     // ------------------------------------------------------------------------
-
-    // ------------------------------------------------------------------------
-    // ZRPos ------------------------------------------------------------------
-    // ------------------------------------------------------------------------
-
-    /**
-     * Get the file position.
-     *
-     * @return the value
-     */
-    public long getPosition() {
-        if (data < 0) {
-            return ((long) data) + 4294967296L;
-        }
-        return ((long) data);
-    }
 
 }
